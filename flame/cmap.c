@@ -1,6 +1,6 @@
 /*
    flame - cosmic recursive fractal flames
-   Copyright (C) 1992  Scott Draves <spot@cs.cmu.edu>
+   Copyright (C) 1992-2003  Scott Draves <source@flam3.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+static char *cmap_c_id =
+"@(#) $Id: cmap.c,v 1.9 2004/03/04 06:35:17 spotspot Exp $";
 
 #include "cmap.h"
 
@@ -5611,6 +5613,10 @@ unsigned char the_cmaps[][256][3] = {
 },   
 
 };
+
+#ifdef WIN32
+#define random rand
+#endif
 
 int get_cmap(int n, clrmap c, int cmap_len, double hue_rotation)
 {

@@ -1,39 +1,28 @@
-dnl $Id: 
+dnl $Id: configure.in,v 1.21 2004/04/13 23:34:29 spotspot Exp $
 dnl Process this file with autoconf to produce a configure script.
+
 AC_INIT(electricsheep.c)
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE(electricsheep,"2.1")
-
-dnl Checks for programs.
+AM_INIT_AUTOMAKE(electricsheep,"2.5")
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
-
-dnl Check for AIX weirdos
-AC_AIX
-
-dnl **********************************************************************
-dnl Checks for libraries.
-dnl **********************************************************************
-
-
-dnl Checks for header files.
 AC_HEADER_STDC
-
-dnl Checks for typedefs, structures, and compiler characteristics.
+if test "x${datadir}" = 'x${prefix}/share'; then
+  if test "x${prefix}" = "xNONE"; then
+    AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${ac_default_prefix}/share/${PACKAGE}", [pkg data dir])
+  else
+    AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${prefix}/share/${PACKAGE}", [pkg data dir])
+  fi
+else
+  AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${datadir}/${PACKAGE}", [pkg data dir])
+fi
 AC_C_CONST
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
-
-AC_PATH_PROG( PERL, perl, , 
-  $PATH:/usr/local/bin/perl:/usr/bin/:/usr/local/bin )
-AC_SUBST(PERL)
-
-AC_PATH_PROGS( NROFF, nroff gnroff, , 
-  $PATH:/usr/bin/:/usr/local/bin )
-AC_SUBST(NROFF)
-
-
-
-AC_OUTPUT( Makefile \
-	     )
+AC_CHECK_HEADERS(sys/mount.h sys/vfs.h sys/statvfs.h)
+AC_CHECK_LIB([expat],[XML_ParserCreate],,[AC_MSG_ERROR([The expat xml library is required.])])
+AC_FUNC_SETPGRP
+AC_CHECK_FUNCS(setproctitle)
+AC_CONFIG_SUBDIRS( mpeg2dec flame )
+AC_OUTPUT( Makefile )

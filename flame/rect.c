@@ -1,6 +1,6 @@
 /*
    flame - cosmic recursive fractal flames
-   Copyright (C) 1992  Scott Draves <spot@cs.cmu.edu>
+   Copyright (C) 1992-2003  Scott Draves <source@flam3.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,6 +16,9 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
+
+static char *rect_c_id =
+"@(#) $Id: rect.c,v 1.12 2004/03/15 02:21:49 spotspot Exp $";
 
 #include "rect.h"
 
@@ -56,14 +59,14 @@ typedef accum_t abucket[4];
 #define FUSE 15
 
 /* clamp spatial filter to zero at this std dev (2.5 ~= 0.0125) */
-#define FILTER_CUTOFF 2.5
+#define FILTER_CUTOFF 1.8
 
 /* should be MAXBUCKET / (OVERSAMPLE^2) */
 #define PREFILTER_WHITE (MAXBUCKET>>4)
 
 
 #define bump_no_overflow(dest, delta, type) { \
-   type tt_ = dest + delta;            \
+   type tt_ = (type) (dest + delta);            \
    if (tt_ > dest) dest = tt_;                 \
 }
 
@@ -90,7 +93,9 @@ void render_rectangle(spec, out, out_width, field, nchan, progress)
    int nchan;
    void progress(double);
 {
-   int i, j, k, nsamples, nbuckets, batch_size, batch_num, sub_batch;
+   int i, j, k, nbuckets, batch_num;
+   // should be int64
+   double nsamples, batch_size, sub_batch;
    bucket  *buckets;
    abucket *accumulate;
    point *points;
@@ -119,25 +124,49 @@ void render_rectangle(spec, out, out_width, field, nchan, progress)
       image_height = spec->cps[0].height;
 
    if (1) {
-      filter_width = (2.0 * FILTER_CUTOFF * oversample *
-		      spec->cps[0].spatial_filter_radius);
+       double fw =  (2.0 * FILTER_CUTOFF * oversample *
+		     spec->cps[0].spatial_filter_radius /
+		     spec->pixel_aspect_ratio);
+       double adjust;
+       filter_width = ((int) fw) + 1;
       /* make sure it has same parity as oversample */
       if ((filter_width ^ oversample) & 1)
 	 filter_width++;
+      if (fw > 0.0)
+	adjust = FILTER_CUTOFF * filter_width / fw;
+      else
+	adjust = 1.0;
+
+#if 0
+      fprintf(stderr, "filter_width = %d adjust=%g\n",
+	      filter_width, adjust);
+#endif
 
       filter = (double *) malloc(sizeof(double) * filter_width * filter_width);
       /* fill in the coefs */
       for (i = 0; i < filter_width; i++)
 	 for (j = 0; j < filter_width; j++) {
-	    double ii = ((2.0 * i + 1.0) / filter_width - 1.0) * FILTER_CUTOFF;
-	    double jj = ((2.0 * j + 1.0) / filter_width - 1.0) * FILTER_CUTOFF;
+	    double ii = ((2.0 * i + 1.0) / filter_width - 1.0) * adjust;
+	    double jj = ((2.0 * j + 1.0) / filter_width - 1.0) * adjust;
 	    if (field)
 	       jj *= 2.0;
+	    jj /= spec->pixel_aspect_ratio;
 	    filter[i + j * filter_width] =
 	       exp(-2.0 * (ii * ii + jj * jj));
 	 }
 
       normalize_vector(filter, filter_width * filter_width);
+#if 0
+      printf("vvvvvvvvvvvvvvvvvvvvvvvvvvvv\n");
+      for (j = 0; j < filter_width; j++) {
+	 for (i = 0; i < filter_width; i++) {
+	   printf(" %5d", (int)(10000 * filter[i + j * filter_width]));
+	 }
+	 printf("\n");
+      }
+      printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+      fflush(stdout);
+#endif
    }
    temporal_filter = (double *) malloc(sizeof(double) * nbatches);
    temporal_deltas = (double *) malloc(sizeof(double) * nbatches);
@@ -195,12 +224,12 @@ void render_rectangle(spec, out, out_width, field, nchan, progress)
    }
 
    background[0] = background[1] = background[2] = 0.0;
-   bzero((char *) accumulate, sizeof(abucket) * nbuckets);
+   memset((char *) accumulate, 0, sizeof(abucket) * nbuckets);
    for (batch_num = 0; batch_num < nbatches; batch_num++) {
       double batch_time;
       double sample_density;
       control_point cp;
-      bzero((char *) buckets, sizeof(bucket) * nbuckets);
+      memset((char *) buckets, 0, sizeof(bucket) * nbuckets);
       batch_time = spec->time + temporal_deltas[batch_num];
 
       /* interpolate and get a control point */
@@ -226,11 +255,20 @@ void render_rectangle(spec, out, out_width, field, nchan, progress)
 	double t0, t1, shift, corner0, corner1;
 	double scale;
 
+	if (cp.sample_density <= 0.0) {
+	  fprintf(stderr,
+		  "sample density (quality) must be greater than zero,"
+		  " not %g.\n", cp.sample_density);
+	  exit(1);
+	}
+
 	scale = pow(2.0, cp.zoom);
 	sample_density = cp.sample_density * scale * scale;
 	
+	
 	ppux = cp.pixels_per_unit * scale;
 	ppuy = field ? (ppux / 2.0) : ppux;
+	ppux /=  spec->pixel_aspect_ratio;
 	switch (field) {
 	case field_both: shift =  0.0; break;
 	case field_even: shift = -0.5; break;
@@ -249,10 +287,12 @@ void render_rectangle(spec, out, out_width, field, nchan, progress)
 	size[1] = 1.0 / (bounds[3] - bounds[1]);
       }
 
-      nsamples = (int) (sample_density * nbuckets /
+      nsamples = (sample_density * (double) nbuckets /
 			(oversample * oversample));
-      
-      /* fprintf(stderr, "nsamples=%d nbuckets=%d\n", nsamples, nbuckets); */
+#if 0
+      fprintf(stderr, "sample_density=%g nsamples=%g nbuckets=%d\n",
+	      sample_density, nsamples, nbuckets);
+#endif
       
       batch_size = nsamples / cp.nbatches;
 
@@ -287,7 +327,7 @@ void render_rectangle(spec, out, out_width, field, nchan, progress)
 	       color_index = CMAP_SIZE-1;
 	    b = buckets +
 	       (int) (width * (p[0] - bounds[0]) * size[0]) +
-		  width * (int) (height * (p[1] - bounds[1]) * size[1]);	    
+		  width * (int) (height * (p[1] - bounds[1]) * size[1]);
 	    for (k = 0; k < 4; k++)
 	       bump_no_overflow(b[0][k], cmap[color_index][k], short);
 	 }
@@ -381,27 +421,27 @@ void render_rectangle(spec, out, out_width, field, nchan, progress)
 	    /* apply to rgb channels the relative scale from gamma of alpha channel */
 	    
 	    a = ls * ((double) t[0] / PREFILTER_WHITE);
-	    if (vibrancy < 1.0)
-		a += (1.0-vibrancy) * 256.0 * pow((double) t[0] / PREFILTER_WHITE, g);
+	    a += (1.0-vibrancy) * 256.0 * pow((double) t[0] / PREFILTER_WHITE, g);
 	    a += ((1.0 - alpha) * background[0]);
 	    if (a < 0) a = 0; else if (a > 255) a = 255;
-	    p[0] = a;
+	    p[0] = (unsigned char) a;
 
 	    // printf("%d %d %g %g %g %g\n", x, y, t[0], alpha, a, ls);
 	    
 	    a = ls * ((double) t[1] / PREFILTER_WHITE);
-	    if (vibrancy < 1.0)
-		a += (1.0-vibrancy) * 256.0 * pow((double) t[1] / PREFILTER_WHITE, g);
+	    a += (1.0-vibrancy) * 256.0 * pow((double) t[1] / PREFILTER_WHITE, g);
 	    a += ((1.0 - alpha) * background[1]);
 	    if (a < 0) a = 0; else if (a > 255) a = 255;
-	    p[1] = a;
+	    p[1] = (unsigned char) a;
 	    
 	    a = ls * ((double) t[2] / PREFILTER_WHITE);
-	    if (vibrancy < 1.0)
-		a += (1.0-vibrancy) * 256.0 * pow((double) t[2] / PREFILTER_WHITE, g);
+	    a += (1.0-vibrancy) * 256.0 * pow((double) t[2] / PREFILTER_WHITE, g);
 	    a += ((1.0 - alpha) * background[2]);
 	    if (a < 0) a = 0; else if (a > 255) a = 255;
-	    p[2] = a;
+	    p[2] = (unsigned char) a;
+
+	    if (nchan > 3)
+	      p[3] = (unsigned char) (alpha * 255.999);
 
 	    x += oversample;
 	 }

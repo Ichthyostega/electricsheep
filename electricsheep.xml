@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<screensaver name="electricsheep" _label="ElectricSheep">
+
+  <command arg="--root 1"/>
+
+  <hgroup>
+    <string id="nick" _label="Nickname" arg="--nick %"/>
+    <string id="url" _label="URL" arg="--url %"/>
+  </hgroup>
+
+  <hgroup>
+
+    <number id="framerate" type="spinbutton" arg="--frame-rate %"
+            _label="Frame Rate" low="1" high="100" default="23"/>
+
+    <number id="nrepeats" type="spinbutton" arg="--nrepeats %"
+            _label="Repititions of each Sheep"
+            low="0" high="10" default="2"/>
+
+  </hgroup>
+
+  <hgroup>
+    <boolean id="zoom" _label="Zoom" arg-set="--zoom 1" />
+    <boolean id="hide" _label="No Animation" arg-set="--display-anim 0" />
+    <boolean id="standalone" _label="No Network" arg-set="--standalone 1" />
+  </hgroup>
+
+  <hgroup>
+  <select id="maxmegs">
+     <option id="m100" _label="100 Mbyte cache" arg-set="--max-megabytes 100"/>
+     <option id="m300" _label="300 Mbyte cache" arg-set="--max-megabytes 300"/>
+     <option id="g1" _label="1 Gbyte cache" arg-set="--max-megabytes 1000"/>
+     <option id="g3" _label="3 Gbyte cache" arg-set="--max-megabytes 3000"/>
+     <option id="u" _label="Unlimited" arg-set="--max-megabytes 0"/>
+  </select>
+  </hgroup>
+
+
+  <_description>
+
+The Electric Sheep screen-saver realizes the collective dream of
+sleeping computers from all over the internet.  When the software
+is activated the screen goes black and an animated, abstract
+'sheep' appears.  In parallel, the screen-saver contacts a server
+and joins the distributed computation of new sheep.  The
+screen-saver is a window into a visual space shared among all
+users.  Clients render JPEG frames and upload them to the server.
+When all the frames are ready the server compresses them into
+MPEG.  The clients download the MPEG sheep and display them one
+after another in a continuous, ever-changing sequence.
+
+The first time you run it, it should take 5 to 10 minutes before the
+first sheep is downloaded and displayed.  After that, it should come
+up immediately.
+
+This module requires a high-bandwidth, always-on connection to
+the internet such as DSL or cable-modem.
+
+See http://electricsheep.org for more information.  This is version
+2.5.
+
+
+  </_description>
+</screensaver>

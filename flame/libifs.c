@@ -1,6 +1,6 @@
 /*
     flame - cosmic recursive fractal flames
-    Copyright (C) 1992  Scott Draves <spot@cs.cmu.edu>
+    Copyright (C) 1992-2003  Scott Draves <source@flam3.com>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,13 +17,32 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+static char *libifs_c_id =
+"@(#) $Id: libifs.c,v 1.30 2004/03/29 01:02:01 spotspot Exp $";
 
 #include <ctype.h>
 #include <stdlib.h>
-
+#include <string.h>
+#include <expat.h>
 #include "libifs.h"
 
-#define CHOOSE_XFORM_GRAIN 1000
+#ifdef WIN32
+#define M_PI 3.1415926539
+#define random()  (rand() ^ (rand()<<15))
+#define srandom(x)  (srand(x))
+#endif
+
+void sort_control_points(control_point *cps, int ncps, double (*metric)());
+double standard_metric(control_point *cp1, control_point *cp2);
+double random_uniform01();
+double random_uniform11();
+double random_gaussian();
+void mult_matrix(double s1[2][2], double s2[2][2], double d[2][2]);
+
+
+#define CHOOSE_XFORM_GRAIN 10000
+
+#define random_distrib(v) ((v)[random()%vlen(v)])
 
 
 /*
@@ -32,14 +51,9 @@
  * in POINTS[0].  ignore the first FUSE iterations.
  */
 
-void iterate(cp, n, fuse, points)
-   control_point *cp;
-   int n;
-   int fuse;
-   point *points;
-{
+void iterate(control_point *cp, int n, int fuse, point *points) {
    int i, j, count_large = 0, count_nan = 0;
-   int xform_distrib[CHOOSE_XFORM_GRAIN];
+   char xform_distrib[CHOOSE_XFORM_GRAIN];
    double p[3], t, r, dr;
    p[0] = points[0][0];
    p[1] = points[0][1];
@@ -51,8 +65,9 @@ void iterate(cp, n, fuse, points)
     * fields 
     */
    dr = 0.0;
-   for (i = 0; i < NXFORMS; i++)
+   for (i = 0; i < NXFORMS; i++) {
       dr += cp->xform[i].density;
+   }
    dr = dr / CHOOSE_XFORM_GRAIN;
 
    j = 0;
@@ -81,7 +96,10 @@ void iterate(cp, n, fuse, points)
 #define vari   cp->xform[fn].var
 
       /* first compute the color coord */
-      p[2] = (p[2] + cp->xform[fn].color) / 2.0;
+      {
+	double s = cp->xform[fn].symmetry;
+	p[2] = (p[2] + cp->xform[fn].color) * 0.5 * (1.0 - s) + s * p[2];
+      }
 
       /* then apply the affine part of the function */
       tx = coef[0][0] * p[0] + coef[1][0] * p[1] + coef[2][0];
@@ -90,7 +108,7 @@ void iterate(cp, n, fuse, points)
       p[0] = p[1] = 0.0;
       /* then add in proportional amounts of each of the variations */
       v = vari[0];
-      if (v > 0.0) {
+      if (v != 0.0) {
 	 /* linear */
 	 double nx, ny;
 	 nx = tx;
@@ -100,7 +118,7 @@ void iterate(cp, n, fuse, points)
       }
       
       v = vari[1];
-      if (v > 0.0) {
+      if (v != 0.0) {
 	 /* sinusoidal */
 	 double nx, ny;
 	 nx = sin(tx);
@@ -110,8 +128,8 @@ void iterate(cp, n, fuse, points)
       }
       
       v = vari[2];
-      if (v > 0.0) {
-	 /* complex */
+      if (v != 0.0) {
+	 /* spherical */
 	 double nx, ny;
 	 double r2 = tx * tx + ty * ty + 1e-6;
 	 nx = tx / r2;
@@ -121,7 +139,7 @@ void iterate(cp, n, fuse, points)
       }
 
       v = vari[3];
-      if (v > 0.0) {
+      if (v != 0.0) {
 	 /* swirl */
 	 double r2 = tx * tx + ty * ty;  /* /k here is fun */
 	 double c1 = sin(r2);
@@ -133,7 +151,7 @@ void iterate(cp, n, fuse, points)
       }
       
       v = vari[4];
-      if (v > 0.0) {
+      if (v != 0.0) {
 	 /* horseshoe */
 	 double a, c1, c2, nx, ny;
 	 if (tx < -EPS || tx > EPS ||
@@ -150,7 +168,8 @@ void iterate(cp, n, fuse, points)
       }
 
       v = vari[5];
-      if (v > 0.0) {
+      if (v != 0.0) {
+	/* polar */
 	 double nx, ny;
 	 if (tx < -EPS || tx > EPS ||
 	     ty < -EPS || ty > EPS)
@@ -164,13 +183,179 @@ void iterate(cp, n, fuse, points)
       }
 
       v = vari[6];
-      if (v > 0.0) {
-	 /* bent */
+      if (v != 0.0) {
+	/* folded handkerchief */
+	 double a, r;
+	 if (tx < -EPS || tx > EPS ||
+	     ty < -EPS || ty > EPS)
+	    a = atan2(tx, ty);
+	 else
+	    a = 0.0;
+	 r = sqrt(tx*tx + ty*ty);
+	 p[0] += v * sin(a+r) * r;
+	 p[1] += v * cos(a-r) * r;
+      }
+
+      v = vari[7];
+      if (v != 0.0) {
+	/* heart */
+	 double a, r;
+	 if (tx < -EPS || tx > EPS ||
+	     ty < -EPS || ty > EPS)
+	    a = atan2(tx, ty);
+	 else
+	    a = 0.0;
+	 r = sqrt(tx*tx + ty*ty);
+	 a *= r;
+	 p[0] += v * sin(a) * r;
+	 p[1] += v * cos(a) * -r;
+      }
+
+      v = vari[8];
+      if (v != 0.0) {
+	/* disc */
+	 double a, r;
 	 double nx, ny;
+	 nx = tx * M_PI;
+	 ny = ty * M_PI;
+	 if (tx < -EPS || tx > EPS ||
+	     ty < -EPS || ty > EPS)
+	    a = atan2(nx, ny);
+	 else
+	    a = 0.0;
+	 r = sqrt(nx*nx + ny*ny);
+	 p[0] += v * sin(r) * a / M_PI;
+	 p[1] += v * cos(r) * a / M_PI;
+      }
+
+      v = vari[9];
+      if (v != 0.0) {
+	/* spiral */
+	 double a, r;
+	 if (tx < -EPS || tx > EPS ||
+	     ty < -EPS || ty > EPS)
+	    a = atan2(tx, ty);
+	 else
+	    a = 0.0;
+	 r = sqrt(tx*tx + ty*ty) + 1e-6;
+	 p[0] += v * (cos(a) + sin(r)) / r;
+	 p[1] += v * (sin(a) - cos(r)) / r;
+      }
+
+      v = vari[10];
+      if (v != 0.0) {
+	/* hyperbolic */
+	 double a, r;
+	 if (tx < -EPS || tx > EPS ||
+	     ty < -EPS || ty > EPS)
+	    a = atan2(tx, ty);
+	 else
+	    a = 0.0;
+	 r = sqrt(tx*tx + ty*ty) + 1e-6;
+	 p[0] += v * sin(a) / r;
+	 p[1] += v * cos(a) * r;
+      }
+
+      v = vari[11];
+      if (v != 0.0) {
+	/* diamond */
+	 double a, r;
+	 if (tx < -EPS || tx > EPS ||
+	     ty < -EPS || ty > EPS)
+	    a = atan2(tx, ty);
+	 else
+	    a = 0.0;
+	 r = sqrt(tx*tx + ty*ty);
+	 p[0] += v * sin(a) * cos(r);
+	 p[1] += v * cos(a) * sin(r);
+      }
+
+      v = vari[12];
+      if (v != 0.0) {
+	/* ex */
+	 double a, r;
+	 double n0, n1, m0, m1;
+	 if (tx < -EPS || tx > EPS ||
+	     ty < -EPS || ty > EPS)
+	    a = atan2(tx, ty);
+	 else
+	    a = 0.0;
+	 r = sqrt(tx*tx + ty*ty);
+	 n0 = sin(a+r);
+	 n1 = cos(a-r);
+	 m0 = n0 * n0 * n0 * r;
+	 m1 = n1 * n1 * n1 * r;
+	 p[0] += v * (m0 + m1);
+	 p[1] += v * (m0 - m1);
+      }
+
+      v = vari[13];
+      if (v != 0.0) {
+	 double a, r, nx, ny;
+	 /* julia */
+	 if (tx < -EPS || tx > EPS ||
+	     ty < -EPS || ty > EPS)
+	    a = atan2(tx, ty)/2.0;
+	 else
+	    a = 0.0;
+	 if (random()&1) a += M_PI;
+	 r = pow(tx*tx + ty*ty, 0.25);
+	 nx = r * cos(a);
+	 ny = r * sin(a);
+	 p[0] += v * nx;
+	 p[1] += v * ny;
+      }
+
+      v = vari[14];
+      if (v != 0.0) {
+	 double nx, ny;
+	 /* bent */
 	 nx = tx;
 	 ny = ty;
 	 if (nx < 0.0) nx = nx * 2.0;
 	 if (ny < 0.0) ny = ny / 2.0;
+	 p[0] += v * nx;
+	 p[1] += v * ny;
+      }
+
+      v = vari[15];
+      if (v != 0.0) {
+	 double nx, ny;
+	 double dx, dy;
+	 /* waves */
+	 dx = coef[2][0];
+	 dy = coef[2][1];
+	 nx = tx + coef[1][0]*sin(ty/((dx*dx)+EPS));
+	 ny = ty + coef[1][1]*sin(tx/((dy*dy)+EPS));
+	 p[0] += v * nx;
+	 p[1] += v * ny;
+      }
+
+      v = vari[16];
+      if (v != 0.0) {
+	 double nx, ny;
+	 double a, r;
+	 /* fisheye */
+	 r = sqrt(tx*tx + ty*ty);
+	 a = atan2(tx, ty);
+	 r = 2 * r / (r + 1);
+	 nx = r * cos(a);
+	 ny = r * sin(a);
+	 p[0] += v * nx;
+	 p[1] += v * ny;
+      }
+
+      v = vari[17];
+      if (v != 0.0) {
+	 double nx, ny;
+	 double dx, dy;
+	 /* popcorn */
+	 dx = tan(3*ty);
+	 if (dx != dx) dx = 0.0;
+	 dy = tan(3*tx);
+	 if (dy != dy) dy = 0.0;
+	 nx = tx + coef[2][0] * sin(dx);
+	 ny = ty + coef[2][1] * sin(dy);
 	 p[0] += v * nx;
 	 p[1] += v * ny;
       }
@@ -187,6 +372,97 @@ void iterate(cp, n, fuse, points)
        && !getenv("PVM_ARCH"))
       fprintf(stderr, "large = %d nan = %d\n", count_large, count_nan);
 #endif
+}
+
+double
+lyapunov(control_point *cp, int ntries)
+{
+  point p[10];
+  double x, y;
+  double xn, yn;
+  double xn2, yn2;
+  double dx, dy, r;
+  double eps = 1e-5;
+  int i;
+  double sum = 0.0;
+
+  for (i = 0; i < ntries; i++) {
+    x = random_uniform11();
+    y = random_uniform11();
+
+    p[0][0] = x;
+    p[0][1] = y;
+    p[0][2] = 0.0;
+
+    // get into the attractor
+    iterate(cp, 1, 20+(random()%10), p);
+
+    x = p[0][0];
+    y = p[0][1];
+
+    // take one deterministic step
+    srandom(i);
+    iterate(cp, 1, 0, p);
+
+    xn = p[0][0];
+    yn = p[0][1];
+
+    do {
+      dx = random_uniform11();
+      dy = random_uniform11();
+      r = sqrt(dx * dx + dy * dy);
+    } while (r == 0.0);
+    dx /= r;
+    dy /= r;
+
+    dx *= eps;
+    dy *= eps;
+
+    p[0][0] = x + dx;
+    p[0][1] = y + dy;
+    p[0][2] = 0.0;
+
+    // take the same step but with eps
+    srandom(i);
+    iterate(cp, 1, 0, p);
+
+    xn2 = p[0][0];
+    yn2 = p[0][1];
+
+    r = sqrt((xn-xn2)*(xn-xn2) + (yn-yn2)*(yn-yn2));
+
+    sum += log(r/eps);
+  }
+  return sum/(log(2.0)*ntries);
+}
+
+/* BY is angle in degrees */
+void
+rotate_control_point(control_point *cp, double by)
+{
+   int i;
+   for (i = 0; i < NXFORMS; i++) {
+      double r[2][2];
+      double T[2][2];
+      double U[2][2];
+      double dtheta = by * 2.0 * M_PI / 360.0;
+
+      /* hmm */
+      if (cp->xform[i].symmetry > 0.0) continue;
+
+      r[1][1] = r[0][0] = cos(dtheta);
+      r[0][1] = sin(dtheta);
+      r[1][0] = -r[0][1];
+      T[0][0] = cp->xform[i].c[0][0];
+      T[1][0] = cp->xform[i].c[1][0];
+      T[0][1] = cp->xform[i].c[0][1];
+      T[1][1] = cp->xform[i].c[1][1];
+      mult_matrix(r, T, U);
+      cp->xform[i].c[0][0] = U[0][0];
+      cp->xform[i].c[1][0] = U[1][0];
+      cp->xform[i].c[0][1] = U[0][1];
+      cp->xform[i].c[1][1] = U[1][1];
+   }
 }
 
 /* args must be non-overlapping */
@@ -383,7 +659,7 @@ void undiagonalize_matrix(r, v, m)
    m[1][1] = t2[1][1];
 }
 
-void interpolate_angle(t, s, v1, v2, v3, tie, cross)
+void interpolate_angle(t, s, v1, v2, v3, tie)
    double t, s;
    double *v1, *v2, *v3;
    int tie;
@@ -391,41 +667,29 @@ void interpolate_angle(t, s, v1, v2, v3, tie, cross)
    double x = *v1;
    double y = *v2;
    double d;
-   static double lastx, lasty;
 
-   /* take the shorter way around the circle... */
+   /* take the shorter way around the circle */
    if (x > y) {
       d = x - y;
       if (d > M_PI + EPS ||
-	  (d > M_PI - EPS && tie))
+	  (d > M_PI - EPS && tie)) {
 	 y += 2*M_PI;
+      }
    } else {
       d = y - x;
       if (d > M_PI + EPS ||
-	  (d > M_PI - EPS && tie))
+	  (d > M_PI - EPS && tie)) {
 	 x += 2*M_PI;
-   }
-   /* unless we are supposed to avoid crossing */
-   if (cross) {
-      if (lastx > x) {
-	 if (lasty < y)
-	    y -= 2*M_PI;
-      } else {
-	 if (lasty > y)
-	    y += 2*M_PI;
       }
-   } else {
-      lastx = x;
-      lasty = y;
    }
 
    *v3 = s * x + t * y;
 }
 
-void interpolate_complex(t, s, r1, r2, r3, flip, tie, cross)
+void interpolate_complex(t, s, r1, r2, r3, flip, tie)
    double t, s;
    double r1[2], r2[2], r3[2];
-   int flip, tie, cross;
+   int flip, tie;
 {
    double c1[2], c2[2], c3[2];
    double a1, a2, a3, d1, d2, d3;
@@ -450,7 +714,7 @@ void interpolate_complex(t, s, r1, r2, r3, flip, tie, cross)
    d2 = 0.5 * log(c2[0] * c2[0] + c2[1] * c2[1]);
 
    /* interpolate linearly */
-   interpolate_angle(t, s, &a1, &a2, &a3, tie, cross);
+   interpolate_angle(t, s, &a1, &a2, &a3, tie);
    d3 = s * d1 + t * d2;
 
    /* convert back */
@@ -468,51 +732,55 @@ void interpolate_complex(t, s, r1, r2, r3, flip, tie, cross)
 }
 
 
-void interpolate_matrix(t, m1, m2, m3)
-   double m1[3][2], m2[3][2], m3[3][2];
-   double t;
-{
+void interpolate_matrix(double t, double m1[3][2], double m2[3][2], double m3[3][2]) {
    double s = 1.0 - t;
-#if 0
-   double r1[2][2], r2[2][2], r3[2][2];
-   double v1[2][2], v2[2][2], v3[2][2];
-   diagonalize_matrix(m1, r1, v1);
-   diagonalize_matrix(m2, r2, v2);
 
-   /* handle the evectors */
-   interpolate_complex(t, s, v1 + 0, v2 + 0, v3 + 0, 0, 0, 0);
-   interpolate_complex(t, s, v1 + 1, v2 + 1, v3 + 1, 0, 0, 1);
+#if 1
+   m3[0][0] = s * m1[0][0] + t * m2[0][0];
+   m3[0][1] = s * m1[0][1] + t * m2[0][1];
 
-   /* handle the evalues */
-   interpolate_complex(t, s, r1 + 0, r2 + 0, r3 + 0, 0, 0, 0);
-   interpolate_complex(t, s, r1 + 1, r2 + 1, r3 + 1, 1, 1, 0);
-
-   undiagonalize_matrix(r3, v3, m3);
+   m3[1][0] = s * m1[1][0] + t * m2[1][0];
+   m3[1][1] = s * m1[1][1] + t * m2[1][1];
+#else
+   interpolate_complex(t, s, m1 + 0, m2 + 0, m3 + 0, 0, 0);
+   interpolate_complex(t, s, m1 + 1, m2 + 1, m3 + 1, 1, 1);
 #endif
-
-   interpolate_complex(t, s, m1 + 0, m2 + 0, m3 + 0, 0, 0, 0);
-   interpolate_complex(t, s, m1 + 1, m2 + 1, m3 + 1, 1, 1, 0);
 
    /* handle the translation part of the xform linearly */
    m3[2][0] = s * m1[2][0] + t * m2[2][0];
    m3[2][1] = s * m1[2][1] + t * m2[2][1];
 }
 
+void interpolate_cmap(double cmap[256][3], double blend,
+		      int index0, double hue0, int index1, double hue1) {
+  double p0[256][3];
+  double p1[256][3];
+  int i, j;
+
+  get_cmap(index0, p0, 256, hue0);
+  get_cmap(index1, p1, 256, hue1);
+  
+  for (i = 0; i < 256; i++) {
+    double t[3], s[3];
+    rgb2hsv(p0[i], s);
+    rgb2hsv(p1[i], t);
+    for (j = 0; j < 3; j++)
+      t[j] = ((1.0-blend) * s[j]) + (blend * t[j]);
+    hsv2rgb(t, cmap[i]);
+  }
+}
+
 #define INTERP(x)  result->x = c0 * cps[i1].x + c1 * cps[i2].x
+#define INTERI(x)  result->x = (int)(c0 * cps[i1].x + c1 * cps[i2].x)
 
 /*
  * create a control point that interpolates between the control points
  * passed in CPS.  for now just do linear.  in the future, add control
  * point types and other things to the cps.  CPS must be sorted by time.
  */
-void interpolate(cps, ncps, time, result)
-   control_point cps[];
-   int ncps;
-   double time;
-   control_point *result;
-{
+void interpolate(control_point cps[], int ncps, double time, control_point *result) {
    int i, j, i1, i2;
-   double c0, c1, t;
+   double c0, c1;
 
    if (1 == ncps) {
       *result = cps[0];
@@ -542,52 +810,25 @@ void interpolate(cps, ncps, time, result)
 
    result->time = time;
 
-   if (cps[i1].cmap_inter) {
-     for (i = 0; i < 256; i++) {
-       double spread = 0.15;
-       double d0, d1, e0, e1, c = 2 * M_PI * i / 256.0;
-       c = cos(c * cps[i1].cmap_inter) + 4.0 * c1 - 2.0;
-       if (c >  spread) c =  spread;
-       if (c < -spread) c = -spread;
-       d1 = (c + spread) * 0.5 / spread;
-       d0 = 1.0 - d1;
-       e0 = (d0 < 0.5) ? (d0 * 2) : (d1 * 2);
-       e1 = 1.0 - e0;
-       for (j = 0; j < 3; j++) {
-	 result->cmap[i][j] = (d0 * cps[i1].cmap[i][j] +
-			       d1 * cps[i2].cmap[i][j]);
-#define bright_peak 2.0
-#if 0
-	 if (d0 < 0.5)
-	   result->cmap[i][j] *= 1.0 + bright_peak * d0;
-	 else
-	   result->cmap[i][j] *= 1.0 + bright_peak * d1;
-#else
-	 result->cmap[i][j] = (e1 * result->cmap[i][j] +
-			       e0 * 1.0);
-#endif
-       }
-     }
-   } else {
-     for (i = 0; i < 256; i++) {
-       double t[3], s[3];
-       rgb2hsv(cps[i1].cmap[i], s);
-       rgb2hsv(cps[i2].cmap[i], t);
-       for (j = 0; j < 3; j++)
-	 t[j] = c0 * s[j] + c1 * t[j];
-       hsv2rgb(t, result->cmap[i]);
-     }
+   for (i = 0; i < 256; i++) {
+     double t[3], s[3];
+     rgb2hsv(cps[i1].cmap[i], s);
+     rgb2hsv(cps[i2].cmap[i], t);
+     for (j = 0; j < 3; j++)
+       t[j] = c0 * s[j] + c1 * t[j];
+     hsv2rgb(t, result->cmap[i]);
    }
 
    result->cmap_index = -1;
+   result->symmetry = 0;
    INTERP(brightness);
    INTERP(contrast);
    INTERP(gamma);
    INTERP(vibrancy);
    INTERP(hue_rotation);
-   INTERP(width);
-   INTERP(height);
-   INTERP(spatial_oversample);
+   INTERI(width);
+   INTERI(height);
+   INTERI(spatial_oversample);
    INTERP(center[0]);
    INTERP(center[1]);
    INTERP(background[0]);
@@ -597,102 +838,21 @@ void interpolate(cps, ncps, time, result)
    INTERP(spatial_filter_radius);
    INTERP(sample_density);
    INTERP(zoom);
-   INTERP(nbatches);
-   INTERP(white_level);
-   for (i = 0; i < 2; i++)
-      for (j = 0; j < 2; j++) {
-	 INTERP(pulse[i][j]);
-	 INTERP(wiggle[i][j]);
-     }
+   INTERI(nbatches);
+   INTERI(white_level);
 
    for (i = 0; i < NXFORMS; i++) {
-      double r;
       INTERP(xform[i].density);
-      if (result->xform[i].density > 0)
-	 result->xform[i].density = 1.0;
       INTERP(xform[i].color);
+      INTERP(xform[i].symmetry);
       for (j = 0; j < NVARS; j++)
 	 INTERP(xform[i].var[j]);
-      t = 0.0;
-      for (j = 0; j < NVARS; j++)
-	 t += result->xform[i].var[j];
-      t = 1.0 / t;
-      for (j = 0; j < NVARS; j++)
-	 result->xform[i].var[j] *= t;
-
       interpolate_matrix(c1, cps[i1].xform[i].c, cps[i2].xform[i].c,
 			 result->xform[i].c);
-
-      if (1) {
-	 double rh_time = time * 2*M_PI / (60.0 * 30.0);
-
-	 /* apply pulse factor. */
-	 r = 1.0;
-	 for (j = 0; j < 2; j++)
-	    r += result->pulse[j][0] * sin(result->pulse[j][1] * rh_time);
-	 for (j = 0; j < 3; j++) {
-	    result->xform[i].c[j][0] *= r;
-	    result->xform[i].c[j][1] *= r;
-	 }
-
-	 /* apply wiggle factor */
-	 r = 0.0;
-	 for (j = 0; j < 2; j++) {
-	    double tt = result->wiggle[j][1] * rh_time;
-	    double m = result->wiggle[j][0];
-	    result->xform[i].c[0][0] += m *  cos(tt);
-	    result->xform[i].c[1][0] += m * -sin(tt);
-	    result->xform[i].c[0][1] += m *  sin(tt);
-	    result->xform[i].c[1][1] += m *  cos(tt);
-	 }
-      }
-   } /* for i */
-}
-
-
-
-/*
- * split a string passed in ss into tokens on whitespace.
- * # comments to end of line.  ; terminates the record
- */
-void tokenize(ss, argv, argc)
-   char **ss;
-   char *argv[];
-   int *argc;
-{
-   char *s = *ss;
-   int i = 0, state = 0;
-
-   while (*s != ';') {
-      char c = *s;
-      switch (state) {
-       case 0:
-	 if ('#' == c)
-	    state = 2;
-	 else if (!isspace(c)) {
-	    argv[i] = s;
-	    i++;
-	    state = 1;
-	 }
-       case 1:
-	 if (isspace(c)) {
-	    *s = 0;
-	    state = 0;
-	 }
-       case 2:
-	 if ('\n' == c)
-	    state = 0;
-      }
-      s++;
    }
-   *s = 0;
-   *ss = s+1;
-   *argc = i;
 }
 
-int compare_xforms(a, b)
-   xform *a, *b;
-{
+int compare_xforms(const xform *a, const xform *b) {
    double aa[2][2];
    double bb[2][2];
    double ad, bd;
@@ -707,177 +867,397 @@ int compare_xforms(a, b)
    bb[1][1] = b->c[1][1];
    ad = det_matrix(aa);
    bd = det_matrix(bb);
+
+   if (a->symmetry < b->symmetry) return 1;
+   if (a->symmetry > b->symmetry) return -1;
+   if (a->symmetry) {
+     if (ad < 0) return -1;
+     if (bd < 0) return 1;
+     ad = atan2(a->c[0][0], a->c[0][1]);
+     bd = atan2(b->c[0][0], b->c[0][1]);
+   }
+
    if (ad < bd) return -1;
    if (ad > bd) return 1;
    return 0;
 }
 
-#define MAXARGS 1000
-#define streql(x,y) (!strcmp(x,y))
 
-/*
- * given a pointer to a string SS, fill fields of a control point CP.
- * return a pointer to the first unused char in SS.  totally barfucious,
- * must integrate with tcl soon...
- */
 
-void parse_control_point(ss, cp) 
-   char **ss;
-   control_point *cp;
-{
-   char *argv[MAXARGS];
-   int argc, i, j;
-   int set_cm = 0, set_image_size = 0, set_nbatches = 0, set_white_level = 0, set_cmap_inter = 0;
-   int set_spatial_oversample = 0, set_hr = 0;
-   double *slot, xf, cm, t, nbatches, white_level, spatial_oversample, cmap_inter;
-   double image_size[2];
+control_point xml_current_cp;
+control_point *xml_all_cp;
+int xml_all_ncps;
+int xml_current_xform;
 
-   for (i = 0; i < NXFORMS; i++) {
-      cp->xform[i].density = 0.0;
-      cp->xform[i].color = (i == 0);
-      cp->xform[i].var[0] = 1.0;
-      for (j = 1; j < NVARS; j++)
-	 cp->xform[i].var[j] = 0.0;
-      cp->xform[i].c[0][0] = 1.0;
-      cp->xform[i].c[0][1] = 0.0;
-      cp->xform[i].c[1][0] = 0.0;
-      cp->xform[i].c[1][1] = 1.0;
-      cp->xform[i].c[2][0] = 0.0;
-      cp->xform[i].c[2][1] = 0.0;
-   }
-   for (j = 0; j < 2; j++) {
-      cp->pulse[j][0] = 0.0;
-      cp->pulse[j][1] = 60.0;
-      cp->wiggle[j][0] = 0.0;
-      cp->wiggle[j][1] = 60.0;
-   }
-   
-   tokenize(ss, argv, &argc);
-   for (i = 0; i < argc; i++) {
-      if (streql("xform", argv[i]))
-	 slot = &xf;
-      else if (streql("time", argv[i]))
-	 slot = &cp->time;
-      else if (streql("brightness", argv[i]))
-	 slot = &cp->brightness;
-      else if (streql("contrast", argv[i]))
-	 slot = &cp->contrast;
-      else if (streql("gamma", argv[i]))
-	 slot = &cp->gamma;
-      else if (streql("vibrancy", argv[i]))
-	 slot = &cp->vibrancy;
-      else if (streql("hue_rotation", argv[i])) {
-	 slot = &cp->hue_rotation;
-	 set_hr = 1;
-      } else if (streql("zoom", argv[i]))
-	 slot = &cp->zoom;
-      else if (streql("image_size", argv[i])) {
-	 slot = image_size;
-	 set_image_size = 1;
-      } else if (streql("center", argv[i]))
-	 slot = cp->center;
-      else if (streql("background", argv[i]))
-	 slot = cp->background;
-      else if (streql("pulse", argv[i]))
-	 slot = (double *) cp->pulse;
-      else if (streql("wiggle", argv[i]))
-	 slot = (double *) cp->wiggle;
-      else if (streql("pixels_per_unit", argv[i]))
-	 slot = &cp->pixels_per_unit;
-      else if (streql("spatial_filter_radius", argv[i]))
-	 slot = &cp->spatial_filter_radius;
-      else if (streql("sample_density", argv[i]))
-	 slot = &cp->sample_density;
-      else if (streql("nbatches", argv[i])) {
-	 slot = &nbatches;
-	 set_nbatches = 1;
-      } else if (streql("white_level", argv[i])) {
-	 slot = &white_level;
-	 set_white_level = 1;
-      } else if (streql("spatial_oversample", argv[i])) {
-	 slot = &spatial_oversample;
-	 set_spatial_oversample = 1;
-      } else if (streql("cmap", argv[i])) {
-	 slot = &cm;
-	 set_cm = 1;
-      } else if (streql("palette", argv[i])) {
-	  slot = &cp->cmap[0][0];
-      } else if (streql("density", argv[i]))
-	 slot = &cp->xform[(int)xf].density;
-      else if (streql("color", argv[i]))
-	 slot = &cp->xform[(int)xf].color;
-      else if (streql("coefs", argv[i])) {
-	 slot = cp->xform[(int)xf].c[0];
-	 cp->xform[(int)xf].density = 1.0;
-       } else if (streql("var", argv[i]))
-	 slot = cp->xform[(int)xf].var;
-      else if (streql("cmap_inter", argv[i])) {
-	slot = &cmap_inter;
-	set_cmap_inter = 1;
-      } else
-	 *slot++ = atof(argv[i]);
-   }
-   if (set_cm) {
-       double hr = set_hr ? cp->hue_rotation : 0.0;
-      cp->cmap_index = (int) cm;
-      get_cmap(cp->cmap_index, cp->cmap, 256, hr);
-   }
-   if (set_image_size) {
-      cp->width  = (int) image_size[0];
-      cp->height = (int) image_size[1];
-   }
-   if (set_cmap_inter)
-      cp->cmap_inter  = (int) cmap_inter;
-   if (set_nbatches)
-      cp->nbatches = (int) nbatches;
-   if (set_spatial_oversample)
-      cp->spatial_oversample = (int) spatial_oversample;
-   if (set_white_level)
-      cp->white_level = (int) white_level;
-   for (i = 0; i < NXFORMS; i++) {
-      t = 0.0;
-      for (j = 0; j < NVARS; j++)
-	 t += cp->xform[i].var[j];
-      t = 1.0 / t;
-      for (j = 0; j < NVARS; j++)
-	 cp->xform[i].var[j] *= t;
-   }
-   qsort((char *) cp->xform, NXFORMS, sizeof(xform), compare_xforms);
+void clear_current_cp() {
+    int i, j;
+    control_point *cp = &xml_current_cp;
+
+    cp->cmap_index = -1;
+    cp->background[0] = 0.0;
+    cp->background[1] = 0.0;
+    cp->background[2] = 0.0;
+    cp->center[0] = 0.0;
+    cp->center[1] = 0.0;
+    cp->pixels_per_unit = 50;
+    cp->width = 100;
+    cp->height = 100;
+    cp->spatial_oversample = 1;
+    cp->gamma = 4.0;
+    cp->vibrancy = 1.0;
+    cp->contrast = 1.0;
+    cp->brightness = 1.0;
+    cp->spatial_filter_radius = 0.5;
+    cp->zoom = 0.0;
+    cp->sample_density = 1;
+    cp->nbatches = 1;
+    cp->white_level = 200;
+    cp->symmetry = 0;
+
+    for (i = 0; i < NXFORMS; i++) {
+	cp->xform[i].density = 0.0;
+	cp->xform[i].symmetry = 0;
+	cp->xform[i].color = (i == 0);
+	cp->xform[i].var[0] = 1.0;
+	for (j = 1; j < NVARS; j++)
+	    cp->xform[i].var[j] = 0.0;
+	cp->xform[i].c[0][0] = 1.0;
+	cp->xform[i].c[0][1] = 0.0;
+	cp->xform[i].c[1][0] = 0.0;
+	cp->xform[i].c[1][1] = 1.0;
+	cp->xform[i].c[2][0] = 0.0;
+	cp->xform[i].c[2][1] = 0.0;
+    }
 }
 
-void print_control_point(f, cp, quote)
-   FILE *f;
-   control_point *cp;
-{
-  int i, j;
-  char *q = quote ? "# " : "";
-  fprintf(f, "%stime %g\n", q, cp->time);
-  if (-1 != cp->cmap_index)
-    fprintf(f, "%scmap %d\n", q, cp->cmap_index);
-  fprintf(f, "%simage_size %d %d center %g %g pixels_per_unit %g\n",
-	  q, cp->width, cp->height, cp->center[0], cp->center[1],
-	  cp->pixels_per_unit);
-  fprintf(f, "%sspatial_oversample %d spatial_filter_radius %g",
-	  q, cp->spatial_oversample, cp->spatial_filter_radius);
-  fprintf(f, " sample_density %g\n", cp->sample_density);
-  fprintf(f, "%snbatches %d white_level %d background %g %g %g\n",
-	  q, cp->nbatches, cp->white_level, cp->background[0], cp->background[1], cp->background[2]);
-  fprintf(f, "%sbrightness %g gamma %g vibrancy %g hue_rotation %g cmap_inter %d\n",
-	  q, cp->brightness, cp->gamma, cp->vibrancy, cp->hue_rotation, cp->cmap_inter);
+static char *var_names[NVARS] = {
+  "linear",
+  "sinusoidal",
+  "spherical",
+  "swirl",
+  "horseshoe",
+  "polar",
+  "handkerchief",
+  "heart",
+  "disc",
+  "spiral",
+  "hyperbolic",
+  "diamond",
+  "ex",
+  "julia",
+  "bent",
+  "waves",
+  "fisheye",
+  "popcorn"
+};
 
-  for (i = 0; i < NXFORMS; i++)
-    if (cp->xform[i].density > 0.0) {
-      fprintf(f, "%sxform %d density %g color %g\n",
-	      q, i, cp->xform[i].density, cp->xform[i].color);
-      fprintf(f, "%svar", q);
-      for (j = 0; j < NVARS; j++)
-	fprintf(f, " %g", cp->xform[i].var[j]);
-      fprintf(f, "\n%scoefs", q);
-      for (j = 0; j < 3; j++)
-	fprintf(f, " %g %g", cp->xform[i].c[j][0], cp->xform[i].c[j][1]);
-      fprintf(f, "\n");
+int var2n(const char *s) {
+  int i;
+  for (i = 0; i < NVARS; i++)
+    if (!strcmp(s, var_names[i])) return i;
+  return variation_none;
+}
+
+void start_element(void *userData, const char *name, const char **atts) {
+    control_point *cp = &xml_current_cp;
+    int i = 0, j;
+    if (!strcmp(name, "flame")) {
+	xml_current_xform = 0;
+	while (atts[i]) {
+	    const char *a = atts[i+1];
+	    if (!strcmp(atts[i], "time")) {
+		cp->time = atof(a);
+	    } else if (!strcmp(atts[i], "palette")) {
+		cp->cmap_index = atoi(a);
+	    } else if (!strcmp(atts[i], "size")) {
+		sscanf(a, "%d %d", &cp->width, &cp->height);
+	    } else if (!strcmp(atts[i], "center")) {
+		sscanf(a, "%lf %lf", &cp->center[0], &cp->center[1]);
+	    } else if (!strcmp(atts[i], "scale")) {
+		cp->pixels_per_unit = atof(a);
+	    } else if (!strcmp(atts[i], "zoom")) {
+		cp->zoom = atof(a);
+	    } else if (!strcmp(atts[i], "oversample")) {
+		cp->spatial_oversample = atoi(a);
+	    } else if (!strcmp(atts[i], "filter")) {
+		cp->spatial_filter_radius = atof(a);
+	    } else if (!strcmp(atts[i], "quality")) {
+		cp->sample_density = atof(a);
+	    } else if (!strcmp(atts[i], "batches")) {
+		cp->nbatches = atoi(a);
+	    } else if (!strcmp(atts[i], "background")) {
+		sscanf(a, "%lf %lf %lf", &cp->background[0],
+		       &cp->background[1], &cp->background[2]);
+	    } else if (!strcmp(atts[i], "brightness")) {
+		cp->brightness = atof(a);
+	    } else if (!strcmp(atts[i], "gamma")) {
+		cp->gamma = atof(a);
+	    } else if (!strcmp(atts[i], "vibrancy")) {
+		cp->vibrancy = atof(a);
+	    } else if (!strcmp(atts[i], "hue")) {
+		cp->hue_rotation = atof(a);
+	    }
+	    i += 2;
+	}
+    } else if (!strcmp(name, "color")) {
+      int index = -1;
+      double r, g, b;
+      r = g = b = 0.0;
+      while (atts[i]) {
+	const char *a = atts[i+1];
+	if (!strcmp(atts[i], "index")) {
+	  index = atoi(a);
+	} else if (!strcmp(atts[i], "rgb")) {
+	  sscanf(a, "%lf %lf %lf", &r, &g, &b);
+	}
+	i += 2;
+      }
+      if (index >= 0) {
+	cp->cmap[index][0] = r/255.0;
+	cp->cmap[index][1] = g/255.0;
+	cp->cmap[index][2] = b/255.0;
+      } else {
+	fprintf(stderr, "color element without index attribute.\n");
+      }
+    } else if (!strcmp(name, "palette")) {
+      int index0, index1;
+      double hue0, hue1;
+      double blend = 0.5;
+      index0 = index1 = cmap_random;
+      hue0 = hue1 = 0.0;
+      while (atts[i]) {
+	const char *a = atts[i+1];
+	if (!strcmp(atts[i], "index0")) {
+	  index0 = atoi(a);
+	} else if (!strcmp(atts[i], "index1")) {
+	  index1 = atoi(a);
+	} else if (!strcmp(atts[i], "hue0")) {
+	  hue0 = atof(a);
+	} else if (!strcmp(atts[i], "hue1")) {
+	  hue1 = atof(a);
+	} else if (!strcmp(atts[i], "blend")) {
+	  blend = atof(a);
+	}
+	i += 2;
+      }
+      interpolate_cmap(cp->cmap, blend, index0, hue0, index1, hue1);
+    } else if (!strcmp(name, "symmetry")) {
+      int kind = 0;
+      while (atts[i]) {
+	const char *a = atts[i+1];
+	if (!strcmp(atts[i], "kind")) {
+	  kind = atoi(a);
+	}
+	i += 2;
+      }
+      xml_current_xform += add_symmetry_to_control_point(cp, kind);
+    } else if (!strcmp(name, "xform")) {
+	int xf = xml_current_xform;
+	if (xf < 0) {
+	    fprintf(stderr, "<xform> not inside <flame>.\n");
+	    exit(1);
+	}
+	if (xml_current_xform == NXFORMS) {
+	    fprintf(stderr, "too many xforms, dropping on the floor.\n");
+	    xml_current_xform--;
+	}
+	for (j = 0; j < NVARS; j++)
+	  cp->xform[xf].var[j] = 0.0;
+	while (atts[i]) {
+	    char *a = (char *) atts[i+1];
+	    if (!strcmp(atts[i], "weight")) {
+		cp->xform[xf].density = atof(a);
+	    } else if (!strcmp(atts[i], "symmetry")) {
+		cp->xform[xf].symmetry = atof(a);
+	    } else if (!strcmp(atts[i], "color")) {
+		cp->xform[xf].color = atof(a);
+	    } else if (!strcmp(atts[i], "var1")) {
+	      int k;
+	      for (k = 0; k < NVARS; k++) {
+		cp->xform[xf].var[k] = 0.0;
+	      }
+	      k = atoi(a);
+	      if (k < 0 || k >= NVARS) {
+		fprintf(stderr, "bad variation: %d.\n", k);
+		k = 0;
+	      }
+	      cp->xform[xf].var[k] = 1.0;
+	    } else if (!strcmp(atts[i], "var")) {
+		int k;
+		for (k = 0; k < NVARS; k++) {
+		    cp->xform[xf].var[k] = strtod(a, &a);
+		}
+	    } else if (!strcmp(atts[i], "coefs")) {
+		int k, j;
+		for (k = 0; k < 3; k++) {
+		    for (j = 0; j < 2; j++) {
+			cp->xform[xf].c[k][j] = strtod(a, &a);
+		    }
+		}
+	    } else {
+	      int v = var2n(atts[i]);
+	      if (v != variation_none)
+		cp->xform[xf].var[v] = atof(a);
+	    }
+	    i += 2;
+	}
     }
-  fprintf(f, "%s;\n", q);
+}
+
+void end_element(void *userData, const char *name) {
+    if (!strcmp("flame", name)) {
+	size_t s = (1+xml_all_ncps)*sizeof(control_point);
+	xml_current_xform = -1;
+	xml_all_cp = realloc(xml_all_cp, s);
+	if (xml_current_cp.cmap_index != -1)
+	  get_cmap(xml_current_cp.cmap_index,
+		   xml_current_cp.cmap, 256,
+		   xml_current_cp.hue_rotation);
+	xml_all_cp[xml_all_ncps++] = xml_current_cp;
+	clear_current_cp();
+    } else if (!strcmp("xform", name)) {
+	xml_current_xform++;
+    }
+}
+
+control_point * parse_control_points(char *s, int *ncps) {
+    XML_Parser parser = XML_ParserCreate(NULL);
+    XML_SetElementHandler(parser, start_element, end_element);
+    xml_current_xform = -1;
+    xml_all_cp = NULL;
+    xml_all_ncps = 0;
+    clear_current_cp();
+    if (!XML_Parse(parser, s, strlen(s), 1)) {
+      fprintf(stderr,
+	      "%s at line %d\n",
+	      XML_ErrorString(XML_GetErrorCode(parser)),
+	      XML_GetCurrentLineNumber(parser));
+      return NULL;
+    }
+    XML_ParserFree(parser);
+    *ncps = xml_all_ncps;
+    return xml_all_cp;
+}
+
+control_point * parse_control_points_from_file(FILE *f, int *ncps) {
+  int i, c, slen = 5000;
+  char *s;
+  
+  s = malloc(slen);
+  i = 0;
+  do {
+    c = getc(f);
+    if (EOF == c) goto done_reading;
+    s[i++] = c;
+    if (i == slen-1) {
+      slen *= 2;
+      s = realloc(s, slen);
+    }
+  } while (1);
+ done_reading:
+  s[i] = 0;
+
+  return parse_control_points(s, ncps);
+}
+
+void print_control_point(FILE *f, control_point *cp,
+			 char *extra_attributes) {
+    int i, j;
+    char *p = "";
+    fprintf(f, "%s<flame time=\"%g\"", p, cp->time);
+    if (0 <= cp->cmap_index)
+	fprintf(f, " palette=\"%d\"", cp->cmap_index);
+    fprintf(f, " size=\"%d %d\"", cp->width, cp->height);
+    if (cp->center[0] != 0.0 ||
+	cp->center[1] != 0.0)
+      fprintf(f, " center=\"%g %g\"", cp->center[0], cp->center[1]);
+    fprintf(f, " scale=\"%g\"", cp->pixels_per_unit);
+    if (cp->zoom != 0.0)
+      fprintf(f, " zoom=\"%g\"", cp->zoom);
+    if (cp->spatial_oversample != 1)
+      fprintf(f, " oversample=\"%d\"", cp->spatial_oversample);
+    fprintf(f, " filter=\"%g\"", cp->spatial_filter_radius);
+    fprintf(f, " quality=\"%g\"", cp->sample_density);
+    fprintf(f, " batches=\"%d\"", cp->nbatches);
+    if (cp->background[0] != 0.0 ||
+	cp->background[1] != 0.0 ||
+	cp->background[2] != 0.0)
+      fprintf(f, " background=\"%g %g %g\"", cp->background[0], cp->background[1], cp->background[2]);
+    fprintf(f, " brightness=\"%g\"", cp->brightness);
+    fprintf(f, " gamma=\"%g\"", cp->gamma);
+    fprintf(f, " vibrancy=\"%g\"", cp->vibrancy);
+    if (0 <= cp->cmap_index &&
+	cp->hue_rotation != 0.0)
+      fprintf(f, " hue=\"%g\"", cp->hue_rotation);
+    if (extra_attributes)
+	fprintf(f, " %s", extra_attributes);
+    fprintf(f, ">\n");
+    if (cmap_interpolated == cp->cmap_index) {
+      fprintf(f, "%s   <palette blend=\"%g\" index0=\"%d\" hue0=\"%g\" ",
+	      p, cp->palette_blend, cp->cmap_index0, cp->hue_rotation0);
+      fprintf(f, "index1=\"%d\" hue1=\"%g\"/>\n",
+	      cp->cmap_index1, cp->hue_rotation1);
+    } else if (cmap_random == cp->cmap_index) {
+      for (i = 0; i < 256; i++) {
+	int r, g, b;
+	r = (int) (cp->cmap[i][0] * 255.0);
+	g = (int) (cp->cmap[i][1] * 255.0);
+	b = (int) (cp->cmap[i][2] * 255.0);
+	printf("%s   <color index=\"%d\" rgb=\"%d %d %d\"/>\n",
+	       p, i, r, g, b);
+      }
+    }
+    if (cp->symmetry)
+      fprintf(f, "%s   <symmetry kind=\"%d\"/>\n", p, cp->symmetry);
+    for (i = 0; i < NXFORMS; i++)
+      if (cp->xform[i].density > 0.0
+	  && !(cp->symmetry &&  cp->xform[i].symmetry == 1.0)) {
+	int nones = 0;
+	int nzeroes = 0;
+	int lastnonzero = 0;
+	fprintf(f, "%s   <xform weight=\"%g\" color=\"%g\" ",
+		p, cp->xform[i].density, cp->xform[i].color);
+	if (cp->xform[i].symmetry != 0.0) {
+	  fprintf(f, "symmetry=\"%g\" ", cp->xform[i].symmetry);
+	}
+#if 1
+	for (j = 0; j < NVARS; j++) {
+	  double v = cp->xform[i].var[j];
+	  if (0.0 != v) {
+	    fprintf(f, "%s=\"%g\" ", var_names[j], v);
+	  }
+	}
+#else
+	for (j = 0; j < NVARS; j++) {
+	  double v = cp->xform[i].var[j];
+	  if (1.0 == v) {
+	    nones++;
+	  } else if (0.0 == v) {
+	    nzeroes++;
+	  }
+	  if (0.0 != v)
+	    lastnonzero = j;
+	}
+	if (1 == nones &&
+	    NVARS-1 == nzeroes) {
+	  fprintf(f, "var1=\"%d\"", lastnonzero);
+	} else {
+	  fprintf(f, "var=\"");
+	  for (j = 0; j <= lastnonzero; j++) {
+	    if (j) fprintf(f, " ");
+	    fprintf(f, "%g", cp->xform[i].var[j]);
+	  }
+	  fprintf(f, "\"");
+	}
+#endif
+	fprintf(f, "coefs=\"");
+	for (j = 0; j < 3; j++) {
+	    if (j) fprintf(f, " ");
+	    fprintf(f, "%g %g", cp->xform[i].c[j][0], cp->xform[i].c[j][1]);
+	}
+	fprintf(f, "\"/>\n");
+    }
+    fprintf(f, "%s</flame>\n", p);
 }
 
 /* returns a uniform variable from 0 to 1 */
@@ -911,71 +1291,146 @@ double random_gaussian() {
    return gset;
 }
 
-void
-copy_variation(control_point *cp0, control_point *cp1) {
-  int i, j;
-  for (i = 0; i < NXFORMS; i++) {
-    for (j = 0; j < NVARS; j++)
-      cp0->xform[i].var[j] = 
-	cp1->xform[i].var[j];
-  }
+double round6(double x) {
+  x *= 1e6;
+  if (x < 0) x -= 1.0;
+  return 1e-6*(int)(x+0.5);
 }
 
-     
+/* sym=2 or more means rotational
+   sym=1 means identity, ie no symmetry
+   sym=0 means pick a random symmetry (maybe none)
+   sym=-1 means bilateral (reflection)
+   sym=-2 or less means rotational and reflective
+*/
+int add_symmetry_to_control_point(control_point *cp, int sym) {
+  int i, j, k;
+  double a;
+  int result = 0;
 
-#define random_distrib(v) ((v)[random()%vlen(v)])
+  if (0 == sym) {
+    static int sym_distrib[] = {
+      -4, -3,
+      -2, -2, -2,
+      -1, -1, -1,
+      2, 2, 2,
+      3, 3,
+      4, 4,
+    };
+    if (random()&1) {
+      sym = random_distrib(sym_distrib);
+    } else if (random()&31) {
+      sym = (random()%13)-6;
+    } else {
+      sym = (random()%51)-25;
+    }
+  }
 
-void random_control_point(cp, ivar) 
-   control_point *cp;
-   int ivar;
-{
+  if (1 == sym || 0 == sym) return 0;
+
+  for (i = 0; i < NXFORMS; i++)
+    if (cp->xform[i].density == 0.0)
+      break;
+
+  if (i == NXFORMS) return 0;
+
+  cp->symmetry = sym;
+
+  if (sym < 0) {
+    cp->xform[i].density = 1.0;
+    cp->xform[i].symmetry = 1.0;
+    cp->xform[i].var[0] = 1.0;
+    for (j = 1; j < NVARS; j++)
+      cp->xform[i].var[j] = 0;
+    cp->xform[i].color = 1.0;
+    cp->xform[i].c[0][0] = -1.0;
+    cp->xform[i].c[0][1] = 0.0;
+    cp->xform[i].c[1][0] = 0.0;
+    cp->xform[i].c[1][1] = 1.0;
+    cp->xform[i].c[2][0] = 0.0;
+    cp->xform[i].c[2][1] = 0.0;
+
+    i++;
+    result++;
+    sym = -sym;
+  }
+
+  a = 2*M_PI/sym;
+
+  for (k = 1; (k < sym) && (i < NXFORMS); k++) {
+    cp->xform[i].density = 1.0;
+    cp->xform[i].var[0] = 1.0;
+    cp->xform[i].symmetry = 1.0;
+    for (j = 1; j < NVARS; j++)
+      cp->xform[i].var[j] = 0;
+    cp->xform[i].color = (sym<3) ? 0.0 : ((k-1.0)/(sym-2.0));
+
+    cp->xform[i].c[0][0] = round6(cos(k*a));
+    cp->xform[i].c[0][1] = round6(sin(k*a));
+    cp->xform[i].c[1][0] = round6(-cp->xform[i].c[0][1]);
+    cp->xform[i].c[1][1] = cp->xform[i].c[0][0];
+    cp->xform[i].c[2][0] = 0.0;
+    cp->xform[i].c[2][1] = 0.0;
+
+    i++;
+    result++;
+  }
+
+  qsort((char *) &cp->xform[i-result], result, sizeof(xform), compare_xforms);
+
+  return result;
+}
+
+int random_var() {
+  return random()%NVARS;
+}
+
+void random_control_point(control_point *cp, int ivar, int sym) {
    int i, nxforms, var;
    static int xform_distrib[] = {
       2, 2, 2,
       3, 3, 3,
       4, 4,
       5};
-   static int var_distrib[] = {
-      -1, -1, -1,
-      0, 0, 0, 0,
-      1, 1, 1,
-      2, 2, 2,
-      3, 3,
-      4, 4,
-      5};
-
-   static int mixed_var_distrib[] = {
-      0, 0, 0,
-      1, 1, 1,
-      2, 2, 2,
-      3, 3,
-      4, 4,
-      5, 5};
 
    cp->hue_rotation = random_uniform01();
    cp->cmap_index = get_cmap(cmap_random, cp->cmap, 256, cp->hue_rotation);
    cp->time = 0.0;
    nxforms = random_distrib(xform_distrib);
-   var = (0 > ivar) ?
-     random_distrib(var_distrib) :
-     ivar;
+   if (variation_random == ivar) {
+     if (random()%4) {
+       var = random_var();
+     } else {
+       var = variation_random;
+     }
+   } else {
+     var = ivar;
+   }
+
    for (i = 0; i < nxforms; i++) {
       int j, k;
       cp->xform[i].density = 1.0 / nxforms;
-      cp->xform[i].color = i == 0;
+      cp->xform[i].color = (nxforms==1)?1.0:(i/(double)(nxforms-1));
+      cp->xform[i].symmetry = 0.0;
       for (j = 0; j < 3; j++)
 	 for (k = 0; k < 2; k++)
 	    cp->xform[i].c[j][k] = random_uniform11();
       for (j = 0; j < NVARS; j++)
 	 cp->xform[i].var[j] = 0.0;
-      if (var >= 0)
+      if (variation_random != var)
 	 cp->xform[i].var[var] = 1.0;
       else
-	 cp->xform[i].var[random_distrib(mixed_var_distrib)] = 1.0;
-      
+	 cp->xform[i].var[random_var()] = 1.0;
    }
    for (; i < NXFORMS; i++)
       cp->xform[i].density = 0.0;
+
+   if (sym || !(random()%4)) {
+     add_symmetry_to_control_point(cp, sym);
+   } else
+     cp->symmetry = 0;
+
+   qsort((char *) cp->xform, NXFORMS, sizeof(xform), compare_xforms);
 }
 
 /*
@@ -989,8 +1444,8 @@ void estimate_bounding_box(cp, eps, bmin, bmax)
    double *bmin;
    double *bmax;
 {
-   int i, j, batch = (eps == 0.0) ? 10000 : 10.0/eps;
-   int low_target = batch * eps;
+   int i, j, batch = (int)((eps == 0.0) ? 10000 : 10.0/eps);
+   int low_target = (int)(batch * eps);
    int high_target = batch - low_target;
    point min, max, delta;
    point *points = (point *)  malloc(sizeof(point) * batch);

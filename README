@@ -1,5 +1,5 @@
 electric sheep - a collaborative screen saver
-Scott Draves <spot@draves.org>
+Scott Draves <readme@electricsheep.org>
 http://electricsheep.org
 see the file COPYING for the license covering this software.
 
@@ -11,7 +11,7 @@ frames to the server, where they are compressed for distribution to
 all clients.
 
 This program is recommended only if you have a high bandwidth
-connection to the internet such as DSL, cable modem, T1, or greater.
+connection to the internet such as DSL or cable modem.
 
 As usual, to configure, build, and install:
 
@@ -19,67 +19,140 @@ As usual, to configure, build, and install:
 	make
 	sudo make install
 
-This package depends on curl and xloadimage.  You can get them from
-http://curl.haxx.se and
-http://rpmfind.net/linux/rpm2html/search.php?query=xloadimage,
-respectively.
+This package depends on curl, xloadimage, and expat.  If you don't
+have them already you can find them with http://rpmfind.net.
 
 After that you can test it by just running it from the commandline
-with "electricsheep".  It draws in the center of the root window,
-which is likely to be covered by another window, so you'll have to
-move the window or switch to a different room to see it.  It also
-takes it a minute or two to download the first animation and get
-going.
+without arguments, ie "electricsheep".  A window will appear, and
+after several minutes of downloading the first sheep will appear.
 
-If you are running the gnome control panel, then electric sheep should
-appear in the list of available screensavers, where you can select it
-to be run automatically when your machine is idle.
-
-To run without gnome, or to set your nickname, add the following line
-to your .Xdefaults file (or whatever you call your X resource file):
-
-xscreensaver.programs: electricsheep --nick xxxx
-
-where "xxxx" is replaced with your nickname.  load the new defaults
-with "xrdb ~/.Xdefaults", and then restart xscreensaver.  xscreensaver
-is documented at http://www.jwz.org/xscreensaver/man.html
+An xscreensaver configuration file is installed so that
+xscreensaver-demo should list electricsheep as an option with a
+graphical configuration panel.  xscreensaver is documented at
+http://www.jwz.org/xscreensaver/man.html
 
 If you patch xscreensaver, then you can vote for the sheep with the up
 and down arrow keys.  These keys will vote for the sheep currently
 displayed rather than exit the saver.  Just apply timers.c.patch to
 xscreensaver/driver/timers.c.
 
-known bug: does not display on 8 bit visuals, perhaps due to the use
-of the root window.  does not display on 15 bit visuals due to a
-terrible hack.
+known bugs.  anyone have a patch to fix one?
 
-known bug: sometimes, the graphics appear in the upper-left corner of
-the screen instead in the center.
-
-known bug: occasionally xscreensaver crashes (BadAccess from
-XGetWindowAttributes) while running electricsheep.  The following
-patch from Aaron Haviland fixed the problem for him, but it made the
-upper-left bug happen all the time for me so i didn't include it, but
-it may well work for you.
-
---- electricsheep-0.4.orig/video_out/gdith.c    Fri Dec 24 11:57:46 1999
-+++ electricsheep-0.4/video_out/gdith.c Mon Apr  9 08:37:28 2001
-@@ -492,7 +492,9 @@
-   }
-
- #ifndef NOCONTROLS
--  XSelectInput(display, xinfo->window, ExposureMask | ButtonPressMask );
-+  if (!rootFlag) {
-+         XSelectInput(display, xinfo->window, ExposureMask | ButtonPressMask );
-+  }
-   // XSelectInput(display, xinfo->window, NoEventMask);
- #else
-   XSelectInput(display, xinfo->window, NoEventMask);
-
-
-
+1) if you are running in a window and close the window via the window
+manager, the main processes do not terminate.  you have to interrupt
+it from the terminal where it was started.
 
 ----
+
+changelog (note that the flame subdirectory has its own README &
+changelog there):
+
+v2.4 7/31/03    make history length a parameter and set the default to
+		30 (it was 3).  change splash screen to include a "wait
+		for download" message.  -window-id disables --zoom 1,
+		this avoids a warning from xscreensaver-demo.
+
+v2.4b7 7/16/03  minor bug in flame interpolation.
+
+v2.4b6 7/10/03  major bug fixes in flame algorithm.  change
+		--maxrepeats option to --max-repeats.
+
+v2.4b5 6/21/03  C1 continuous interpolation and symmetries in the flame
+		module, fullscreen zooming from Dan Nelson.
+
+v2.4b3 5/27/03  change server to sheepserver.net
+
+v2.4b2 5/7/03	fix the shared memory leak in mpeg2dec from Dan Nelson
+		(according to the comment it breaks solaris
+		compatibility).  install xml configuration for redhat
+		9 and redhat 8.  make the default sheep cache be 100
+		megabytes in the executable and in the xscreensaver
+		xml configuration file.  add maxrepeats.
+
+v2.4b1 4/12/03  support mplayer directly.  patches that fix bugs and
+		FreeBSD compatibility issues from Dan Nelson:  memory
+		allocation bug where filenames were stored on the
+		stack after they left scope.  more error information
+		from curl.  off_t may not be an integer. use
+		setproctitle if supported.  use statvfs as needed, and 
+		call setpgrp with 0 or 2 arguments as appropriate.
+		include ctype.h.
+
+v2.3 2/23/03	done with beta!  change the server back to 2.3 from
+		2.3b.
+
+v2.3b12 2/10/03 remove the splash-prefix argument.  increase the
+		default timeout.  add the min-megabytes option.
+		remove the trailing slash splash_prefix (now it comes
+		from where it is used).  if you give 0 to the
+		max-megabytes option then there is no maximum (except
+		as imposed by min-megabytes).  there were also changes
+		to the flame module.
+
+v2.3b11 1/16/03	fix bug reported by Olin Shivers where even with
+		"--root 0" it was drawing the splash/logo on the root.
+		anim-flame now supports jpg directly so don't call
+		cjpeg.  don't report the cache contents unless the
+		debug level is 2 or higher.
+
+v2.3b10 1/5/03	apply patch from Tal Kelrich that makes the voting
+		interface optional at runtime instead of compile time,
+		and adds an option to preserve the background
+		(--anim-only), and fixes a bug resulting in spinning
+		when trying to delete files from the local cache.
+
+v2.3b9 12/27/02 download older animations first (instead of newer).
+		fix problem of cache churn when client cache was
+		smaller than server cache.  the symptom was the client
+		would delete and redownload sheep endlessly.  the cure
+		is to remember the sheep that have been deleted from
+		the client until they are also deleted from the
+		server.  the method is to use a zero-length file
+		blah.xxx to remember that blah.mpg has been deleted.
+		some of the code was 2-space indented.  reformat back
+		to 4 spaces.
+
+v2.3b8 12/22/02 change domain name back to electricsheep.org!
+		in the flame module: handle numbers of samples that
+		overflow 32 bits.  better error detection and
+		reporting.  removed hard limits.  renamed hqi.c to
+		hqi-flame.c and added it to the makefile so it is
+		built & installed (though not used by electric sheep).
+
+v2.3b7 12/18/02 change domain name to just electric-sheep.org.
+		update my email address everywhere.
+
+v2.3b6 12/16/02 patch from Dan Nelson fixing lack of null-termination
+		of string from server in anim-flame.c
+
+v2.3b5 12/16/02 p.k. dick's birthday is today!  fix formatting of
+		source to fit in 80 columns.  improve error reporting
+		when disconnected from the server.
+
+v2.3b4 12/15/02 report text messages from the server specified by the
+		<message> element.  and deal with <error>.  and an
+		empty <get> tag means there are no sheep to render.
+
+v2.3b3 12/13/02 applied patch from Dan Nelson to improve how the
+                number of CPUs is calculated. put into CVS (added $Id
+                strings).  smarter encoding of nick and url (don't
+                escape everything).  add URL option to graphical
+                config.  put flame subdirectory under autoconf and
+                automake.  added flam3.com as alternate server.  check
+		for presence of expat in configure.
+
+v2.3b2 12/9/02 redid how frame rate was maintained in mpeg2dec, and
+               added a lock so that multiple executables do not
+               conflict (thanks to Jonathan Morton for pointing out
+               these problems).  removed unused directories from
+               mpeg2dec tree.
+
+v2.3b1 12/5/02 substantial release after too many moons.  replaced
+               mpegplay with mpeg2dec, ie play mpeg2 instead of mpeg1.
+               protocol is now compressed xml instead of ad hoc
+               crud. updated to work with redhat 8, that is, with
+               xscreensaver-demo and its xml config file.  many small
+               changes.
 
 v2.1 7/3/01 vibrant colors, hue rotation, background color added. bug
             fixed by Matt Reda <mreda@mac.com>: the wrong file was
