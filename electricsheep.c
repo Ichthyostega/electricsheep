@@ -31,8 +31,8 @@
 #include <sys/param.h>
 #include "config.h"
 
-// should get this from configure
-char *splash_prefix = "/usr/local/share/";
+// should get this from configure, note: this should have / at the end
+char *splash_prefix = "/usr/share/electricsheep/";
 
 char *proxy_name = 0;
 
@@ -190,7 +190,7 @@ mysystem(char *cmd, char *msg) {
   if (0 != (n = interruptable_system(cmd))) {
     if (SIGINT != n) {
       fprintf(stderr, "subprocess error: %s, %d=%d<<8+%d\n", msg, n, n>>8, n&255);
-      return 1;
+	  cleanup_and_exit(1);
     }
     fprintf(stderr, "control-c during %s, exiting\n", msg);
     cleanup_and_exit(1);
@@ -485,7 +485,7 @@ do_display() {
 	}
 
 	cached_file_name(fbuf, &cached_anims[idx]);
-	sprintf(pbuf, "%s -root -iters %d -framerate %d %s",
+	sprintf(pbuf, "%s -root -dither color2 -iters %d -framerate %d %s",
 		play_prog, niters, frame_rate, fbuf);
 	mysystem(pbuf, "play decoder");
     }

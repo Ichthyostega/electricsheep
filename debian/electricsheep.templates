@@ -1,0 +1,35 @@
+Template: esheep/not_safe
+Type: note
+Description: Two notes about Electric Sheep.
+ 1) The upstream source maintainers are aware of a bug that electricsheep 
+ might "crash" during normal run. I have not seen this happen, but be 
+ aware. I believe that IF it crashes, and you use this program as a
+ X-Screensaver addon, it might leave your console unlocked for anyone
+ to (ab)use.
+ .
+ 2) It takes some time before Electric Sheep actually shows the nice
+ animated "computer dreams". This is because it has to download and
+ compute the graphics. After it has done this once, it will always
+ work immediately.
+Description-nl: Twee meldingen over Electric Sheep.
+ 1) De programmeurs van Electric Sheep zijn op de hoogte van een bug die
+ er voor zorgt dat het programma kan crashen. Ik heb dit nog niet zien
+ gebeuren, maar let op. Ik denk dat ALS het programma crasht en je
+ gebruikt het als X-Screensaver uitbreiding, dat het dan je computer
+ onbeveiligd laat.
+ .
+ 2) Het duurt een poosje voor Electric Sheep de "computer dromen" laat
+ zien. Dit komt omdat het programma eerst de tekeningen moet downloaden
+ en bereken. Als dit een keer is gedaan, zal het voortaan altijd direct
+ beginnen met afbeelden van de tekeningen.
+Description-pt_BR: Duas notas sobre Eletric Sheep.
+ 1) Os matenedores upstream dos fontes estão cientes de um bug no qual
+ o eletrichsheep pode "travar" durante a execução normal. Eu não vi isso
+ acontecer, mas esteja avisado. Eu acredito que SE ele travar e você usa
+ este programa como um addon ao X-Screensaver, ele poderá deixar seu
+ console destravado para que qualquer pessoa (ab)use.
+ .
+ 2) Leva algum tempo antes que o Eletric Sheep atualmente exiba os "sonhos
+ de computadores" animados. Isto é porque ele tem que fazer o download e
+ animar os gráficos. Depois que ele tenha feito isso uma vez, ele sempre
+ funcionará imediatamente.

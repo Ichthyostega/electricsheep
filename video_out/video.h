@@ -435,12 +435,12 @@ extern unsigned int cacheMiss[8][8];
 #define __SCO__ 1
 #endif
 
-#if defined(__i386__) || defined(__VAX__) || defined(__MIPSEL__) || defined(__alpha__) || defined(__SCO__)
+#if defined(__i386__) || defined(__VAX__) || defined(__MIPSEL__) || defined(__alpha__) || defined(__SCO__) || defined(__ia64__)
 #undef  BIG_ENDIAN_ARCHITECTURE
 #define LITTLE_ENDIAN_ARCHITECTURE 1
 #endif
 
-#if defined(__RS6000__) || defined(__SPARC__) || defined(__680x0__) || defined(__HPUX__) || defined(__MIPSEB__) || defined(convex) || defined(__convex__) || defined(__powerpc__)
+#if defined(__s390__) || defined (__S390__) || defined(__RS6000__) || defined(__SPARC__) || defined(__680x0__) || defined(__hppa__) || defined(__MIPSEB__) || defined(convex) || defined(__convex__) || defined(__powerpc__)
 #undef  LITTLE_ENDIAN_ARCHITECTURE
 #define BIG_ENDIAN_ARCHITECTURE 1
 #endif

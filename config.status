@@ -2,7 +2,7 @@
 # Generated automatically by configure.
 # Run this file to recreate the current configuration.
 # This directory was configured as follows,
-# on host sandoz:
+# on host knopje:
 #
 # ./configure 
 #
@@ -67,7 +67,7 @@ s%@ACLOCAL@%aclocal%g
 s%@AUTOCONF@%autoconf%g
 s%@AUTOMAKE@%automake%g
 s%@AUTOHEADER@%autoheader%g
-s%@MAKEINFO@%makeinfo%g
+s%@MAKEINFO@%/extra/esheep/electricsheep-2.1/missing makeinfo%g
 s%@SET_MAKE@%%g
 s%@CC@%gcc%g
 s%@CPP@%gcc -E%g

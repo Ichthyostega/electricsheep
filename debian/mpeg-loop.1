@@ -1,0 +1,51 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH MPEG-LOOP 1 "June 27, 2001"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+mpeg-loop \- part of electricsheep, mpeg video player
+.SH SYNOPSIS
+.B mpeg-loop
+.RI [ options ] .. file
+.SH DESCRIPTION
+.B mpeg-loop
+is part of the
+.B electricsheep(1)
+package. This program plays mpeg video streams on the root X window.
+Although this program is part of
+.B electricsheep(1)
+you can use this program stand-alone.
+.SH OPTIONS
+.TP
+.B \-\-help
+Show summary of options.
+.TP
+.B \-\-loop
+Loop the playing mpeg.
+.TP
+.B \-\-iter N
+Loop the mpeg N times
+.TP
+.B \-\-quiet
+Turns off all program output
+.TP
+.B \-\-dither <type>
+Set & use dither for drawing the mpeg stream. <type> can be one of
+ordered, ordered2, mbordered, fs4, fs2, fs2fast, hybrid, hybrid2, 2x2, gray, gray256, color, color2, none, mono, threshold, ppm, gray2, gray256x2
+.br
+.SH AUTHOR
+This manual page was written by Sander Smeenk <ssmeenk@debian.org>,
+for the Debian GNU/Linux system (but may be used by others).

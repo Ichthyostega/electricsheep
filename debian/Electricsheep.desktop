@@ -1,0 +1,27 @@
+[Desktop Entry]
+Name=Electricsheep
+Name[ca]=Electricsheep
+Name[da]=Electricsheep
+Name[de]=Electricsheep
+Name[fi]=Electricsheep
+Name[fr]=Electricsheep
+Name[hu]=Electricsheep
+Name[no]=Electricsheep
+Name[ru]=Electricsheep
+Name[sk]=Electricsheep
+Name[sl]=Electricsheep
+Name[sv]=Electricsheep
+Name[uk]=Electricsheep
+Comment=
+Exec=xscreensaver-command -activate
+TryExec=electricsheep
+Terminal=0
+Type=Application
+
+[Screensaver Data]
+WindowIdCommand=
+RootCommand=
+Icon=electricsheep.png
+Author=
+ExtendedComment=Do androids dream of electric sheep?
+Demo=electricsheep

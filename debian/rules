@@ -1,0 +1,88 @@
+#!/usr/bin/make -f
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This is the debhelper compatability version to use.
+export DH_COMPAT=3
+
+configure: configure-stamp
+configure-stamp:
+	dh_testdir
+	./configure
+	touch configure-stamp
+
+build: configure-stamp build-stamp
+build-stamp:
+	dh_testdir
+	$(MAKE)
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp configure-stamp
+	find -type f -name "*.o" -exec rm -f {} \;
+	rm -f flame/*-flame
+	rm -f video_out/mpeg_play
+	-$(MAKE) distclean
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# Make Directories
+	mkdir -p debian/electricsheep/usr/bin
+	mkdir -p debian/electricsheep/usr/share/electricsheep
+	mkdir -p debian/electricsheep/usr/share/control-center/.data
+	# Copy Binaries
+	cp electricsheep debian/electricsheep/usr/bin
+	cp flame/pick-flame debian/electricsheep/usr/bin
+	cp flame/anim-flame debian/electricsheep/usr/bin
+	cp video_out/mpeg_play debian/electricsheep/usr/bin/mpeg-loop
+	# Copy other data
+	cp *.tif *.png debian/electricsheep/usr/share/electricsheep
+	# Gnome's Screensaver Thingy
+	cp debian/Electricsheep.desktop debian/electricsheep/usr/share/control-center/.data
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installdebconf	
+	dh_installdocs
+	dh_installexamples
+	dh_installmenu
+#	dh_installlogrotate
+#	dh_installemacsen
+#	dh_installpam
+#	dh_installmime
+#	dh_installinit
+	dh_installcron
+	dh_installman debian/*.1
+	dh_installinfo
+#	dh_undocumented
+	dh_installchangelogs 
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+#	dh_makeshlibs
+	dh_installdeb
+#	dh_perl
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure

@@ -1,0 +1,51 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH ELECTRICSHEEP 1 "June 27, 2001"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+electricsheep \- collective dream of computers screensaver
+.SH SYNOPSIS
+.B electricsheep
+.RI [ options ]
+.SH DESCRIPTION
+.B Electric sheep
+is the collective dream of sleeping computers from all over the internet. Less
+poetically, it is an Internet server and xscreensaver module that displays MPEG
+video of an animated fractal flame.  In the background, it contributes render
+cycles to the next animation.  Periodically, it uploads completed frames to the
+server, where they are compressed for distribution to all clients.
+.SH OPTIONS
+This program follow the usual GNU command line syntax, with long
+options starting with two dashes (`-').
+.TP
+.B \-\-help
+Show summary of options.
+.TP
+.B \-\-version
+Show version of program.
+.TP
+.B \-\-nick <name>
+Set nickname to use for uploading rendered frames
+.TP
+.B \-\-nice N
+Set nice level to run renderprocess under.
+.TP
+.B \-\-timeout N
+Set timeout for downloading pre-rendered mpegs in seconds
+.br
+.SH AUTHOR
+This manual page was written by Sander Smeenk <ssmeenk@debian.org>,
+for the Debian GNU/Linux system (but may be used by others).

@@ -1,0 +1,8 @@
+electricsheep for Debian
+------------------------
+
+I don't do 'make install DEST=' from debian/rules because the friggin'
+upstream doesn't have support for this in any way. So. cp will be my
+friend for this package.
+
+ -- Sander Smeenk <ssmeenk@debian.org>, Wed, 27 Jun 2001 15:18:30 +0200
