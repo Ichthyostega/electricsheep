@@ -1,0 +1,24 @@
+util.o: util.c video.h vroot.h proto.h util.h ctrlbar.h
+video.o: video.c ctrlbar.h decoders.h util.h video.h vroot.h proto.h
+parseblock.o: parseblock.c video.h vroot.h proto.h decoders.h util.h
+motionvector.o: motionvector.c video.h vroot.h proto.h util.h
+decoders.o: decoders.c decoders.h util.h video.h vroot.h proto.h
+main.o: main.c video.h vroot.h proto.h ctrlbar.h util.h dither.h
+gdith.o: gdith.c video.h vroot.h proto.h dither.h ctrlbar.h
+fs2.o: fs2.c video.h vroot.h dither.h fs2.h proto.h
+fs2fast.o: fs2fast.c video.h vroot.h proto.h dither.h
+fs4.o: fs4.c fs4.h video.h vroot.h proto.h dither.h
+hybrid.o: hybrid.c video.h vroot.h proto.h dither.h
+hybriderr.o: hybriderr.c video.h vroot.h proto.h dither.h
+2x2.o: 2x2.c video.h vroot.h dither.h proto.h
+gray.o: gray.c video.h vroot.h proto.h dither.h
+mono.o: mono.c video.h vroot.h proto.h dither.h
+jrevdct.o: jrevdct.c video.h vroot.h proto.h
+16bit.o: 16bit.c video.h vroot.h dither.h proto.h
+util32.o: util32.c video.h vroot.h proto.h
+ordered.o: ordered.c video.h vroot.h proto.h dither.h
+ordered2.o: ordered2.c video.h vroot.h proto.h dither.h
+mb_ordered.o: mb_ordered.c video.h vroot.h proto.h dither.h
+readfile.o: readfile.c video.h vroot.h proto.h util.h dither.h
+floatdct.o: floatdct.c
+ctrlbar.o: ctrlbar.c dither.h video.h vroot.h ctrlbar.h proto.h

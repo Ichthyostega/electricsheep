@@ -1,0 +1,137 @@
+electric sheep - a collaborative screen saver
+Scott Draves <spot@draves.org>
+http://electricsheep.org
+see the file COPYING for the license covering this software.
+
+
+Electric sheep is an xscreensaver module that displays mpeg video of
+an animated fractal flame.  In the background it contributes render
+cycles to the next animation.  Periodically it uploades completed
+frames to the server, where they are compressed for distribution to
+all clients.
+
+This program is recommended only if you have a high bandwidth
+connection to the internet such as DSL, cable modem, T1, or greater.
+
+As usual, to configure, build, and install:
+
+	./configure
+	make
+	sudo make install
+
+This package depends on curl and xloadimage.  You can get them from
+http://curl.haxx.se and
+http://rpmfind.net/linux/rpm2html/search.php?query=xloadimage,
+respectively.
+
+After that you can test it by just running it from the commandline
+with "electricsheep".  It draws in the center of the root window,
+which is likely to be covered by another window, so you'll have to
+move the window or switch to a different room to see it.  It also
+takes it a minute or two to download the first animation and get
+going.
+
+If you are running the gnome control panel, then electric sheep should
+appear in the list of available screensavers, where you can select it
+to be run automatically when your machine is idle.
+
+To run without gnome, or to set your nickname, add the following line
+to your .Xdefaults file (or whatever you call your X resource file):
+
+xscreensaver.programs: electricsheep --nick xxxx
+
+where "xxxx" is replaced with your nickname.  load the new defaults
+with "xrdb ~/.Xdefaults", and then restart xscreensaver.  xscreensaver
+is documented at http://www.jwz.org/xscreensaver/man.html
+
+If you patch xscreensaver, then you can vote for the sheep with the up
+and down arrow keys.  These keys will vote for the sheep currently
+displayed rather than exit the saver.  Just apply timers.c.patch to
+xscreensaver/driver/timers.c.
+
+known bug: does not display on 8 bit visuals, perhaps due to the use
+of the root window.  does not display on 15 bit visuals due to a
+terrible hack.
+
+known bug: sometimes, the graphics appear in the upper-left corner of
+the screen instead in the center.
+
+known bug: occasionally xscreensaver crashes (BadAccess from
+XGetWindowAttributes) while running electricsheep.  The following
+patch from Aaron Haviland fixed the problem for him, but it made the
+upper-left bug happen all the time for me so i didn't include it, but
+it may well work for you.
+
+--- electricsheep-0.4.orig/video_out/gdith.c    Fri Dec 24 11:57:46 1999
++++ electricsheep-0.4/video_out/gdith.c Mon Apr  9 08:37:28 2001
+@@ -492,7 +492,9 @@
+   }
+
+ #ifndef NOCONTROLS
+-  XSelectInput(display, xinfo->window, ExposureMask | ButtonPressMask );
++  if (!rootFlag) {
++         XSelectInput(display, xinfo->window, ExposureMask | ButtonPressMask );
++  }
+   // XSelectInput(display, xinfo->window, NoEventMask);
+ #else
+   XSelectInput(display, xinfo->window, NoEventMask);
+
+
+
+
+----
+
+v2.1 7/3/01 vibrant colors, hue rotation, background color added. bug
+            fixed by Matt Reda <mreda@mac.com>: the wrong file was
+            getting deleted when it tried to reduce cache size!
+            added reset fuse, statistics reporting, proxy
+            argument. patch from rockear@hive-mind.net for powerpc.
+            handle network disconnection and bad anim files gracefully.
+
+v2.0 5/16/01 the big change from the 0.x to 2.x series is the
+             introduction of connectivity and transitions, so the
+             animation is always smoothly changing, there are no cuts
+             (unless it gets stuck and it has to).  also: multiple
+             rendering threads, a separate download thread, voting
+             (via xscreensaver or just a named pipe), support for
+             rendering single hirez frames of many tiles instead of
+             animations of many frames, theoretical support for
+             rendering modules other than anim.
+
+v1.10 not released.
+
+v1.9 reconstituted, private pre2.0 release.
+
+v0.5 (not released) removed empty AC_CONFIG_SUBDIRS from configure.in
+             and added return 0 to anim.c (bugfixes from Martin Pool).
+             added net-present and parasite options, various
+             bulletproofing.
+
+v0.4 7/31/00 create ~/.sheep directory if needed (bug report by jai
+             young kim).  i'm not bumping the version number since 0.4
+             hasn't been distributed yet.
+
+v0.4 6/29/00 by default now save the mpeg files in ~/.sheep/ (it keeps
+             the last 50 megabytes), and switch between them instead
+             of cycling the same one.  mpeg-play now exits more
+             gracefully when it is unable to read the input file,
+             preventing evil xscreensaver crashes i hope.  minor
+             cleanup.
+
+v0.3 12/24/99 removed curl from distribution (since no longer
+              distributing libc5).  bugfix to anim.c from Steinar
+              H. Gunderson and Evan Martin.  made more robust in face
+              of network failures (thanks to Will Luo for pointing out
+              this problem).  automatically installs gnome screensaver
+              control panel files.
+
+v0.2.1 10/17/99 splash page error no longer fatal.  added dependencies
+              for xloadimage and xscreensaver to rpm spec.  should
+              take curl out & use a dependency, but it's too painful
+              with libc5/6.
+
+v0.2 10/16/99 adopt curl, separate client & server, adopt automake &
+              autoconf, gamma is now 1 on the client side, misc
+              features & bugs.
+
+v0.1 10/2/99 first version.  private beta release.

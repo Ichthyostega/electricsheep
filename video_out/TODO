@@ -1,0 +1,27 @@
+TODO list for next release of mpeg_play
+---------------------------------------
+
+change mpegvga.patch to work with new files [ ]
+new dither                                  [ ]
+sparc10 mp problem                          [ ]
+vms patches                                 [ ]
+Change frame-rate limiter to do time-average 
+        (and thus better match)             [ ]
+save button                                 [ ]
+-nob/p buttons                              [ ]
+
+
+WISH LIST
+---------
+Add AC-prediction decoding              [ ]
+Get dithers to work in VGA mode         [ ] 
+IDCT compliance                         [ ] 
+Implement frame-dropping to meet rates  [ ]
+audio support                           [ ]
+MPEG2                                   [ ]
+-realtime (frame dropping)              [ ]
+
+x = done
+y = done but not yet incorporated, working
+? = status unknown
+

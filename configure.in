@@ -1,0 +1,39 @@
+dnl $Id: 
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(electricsheep.c)
+AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(electricsheep,"2.1")
+
+dnl Checks for programs.
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_MAKE_SET
+
+dnl Check for AIX weirdos
+AC_AIX
+
+dnl **********************************************************************
+dnl Checks for libraries.
+dnl **********************************************************************
+
+
+dnl Checks for header files.
+AC_HEADER_STDC
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+
+AC_PATH_PROG( PERL, perl, , 
+  $PATH:/usr/local/bin/perl:/usr/bin/:/usr/local/bin )
+AC_SUBST(PERL)
+
+AC_PATH_PROGS( NROFF, nroff gnroff, , 
+  $PATH:/usr/bin/:/usr/local/bin )
+AC_SUBST(NROFF)
+
+
+
+AC_OUTPUT( Makefile \
+	     )

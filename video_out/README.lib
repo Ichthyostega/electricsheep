@@ -1,0 +1,70 @@
+It is probably best to get the updated library patches from
+ http://www.cs.brown.edu/software/ooMPEG/
+Here are the implementor's notes.....
+--------------------
+MPEG Changes for Reentrancy (plus)
+
+Sun compiler commands to use code as a library:
+-DBSD -DNONANSI_INCLUDES -DSIG_ONE_PARAM -DDEFAULT_FULL_COLOR -DNOFRAMECOUNT
+-DNOCONTROLS -DDISABLE_DITHER
+
+SGI compiler commands to use code as a library:
++w -cckr -DDEFAULT_FULL_COLOR -DNOFRAMECOUNT  -DNOCONTROLS -DDISABLE_DITHER
+
+HP compile commands for use code as a library:
+-Aa -D_HPUX_SOURCE -DDEFAULT_FULL_COLOR -DNOFRAMECOUNT -DDISABLE_DITHER
+
+Most changes just involved making sure that previous global information
+(or static function variables) are passed down the call path to those
+functions that need the information.
+
+Changes not involving reentrancy (also mentioned in source files):
+	do not define INTERPOLATE, add #ifdef INTERPOLATE (16bit.c)
+	Do prototyping for static function (ctrlbar.c)
+	Now can name and position each movie window individually (gdith.c, main.c)
+	DISABLE_DITHER cpp define - do not include dither code if defined
+	   (gdith,main.c, util32.c video.c video.h)
+	NOFRAMECOUNT cpp define - do not count frames when running without
+	   controls (gdith.c)
+	Short circuit InitColorDisplay if not displaying anything (gdith.c)
+	Ability to play >1 movie (w/out CONTROLS) (main.c, et al)
+	Make sure we do a full frame for each movie (main.c)
+	Changes to deal with non-MPEG streams (main.c)
+	Now deals with NO_DITHER, PPM_DITHER and noDisplayFlag==1 (main.c)
+	get rid on ANSI C complaints about shifting (readfile.c)
+	only call DestroyVidStream up in mpegVidRsrc, not in correct_underflow
+	   (util.c)
+	fix parameter types for XCreateWindow call (util32.c)
+
+
+
+Further changes that might (should?) be made:
+
+statics that should be "de-globalized":
+	gdith.c: ExecuteDisplay rate_deal, one_frame_time, tftarget, tfnow
+		(when framerate=0, these aren't used)
+	video.c: No_[PB]_Flag
+		(effects how the movies are decoded)
+
+globals that should be de-globalized
+	main.c, gdith.c: framerate 
+		(set framerate=0 for multiple movies - no waiting)
+	video.h: quietFlag, qualityFlag, gammaCorrectFlag,
+	   chromaCorrectFlag, chromaCorrect
+		(quietFlag=0 - don't print stuff out)
+		(qualityFlag=0 - don't do high quality)
+		(correctFlag's - same for all movies)
+	gdith.c,video.h: startFrame,endFrame
+		(startFrame=endFrame=-1 - don't do any frame weirdness)
+
+Note - my development Makefile is included in the tar file, but it uses
+gnu-make and depends on:
+	UGA_ARCH environment variable set to: sgi, hp, or sol (architecture
+	type)
+        File system location is hardcoded in, including binary directories for
+	each architecture and compile type (controls, dithering, shared
+	memory)
+
+Loring Holden
+lsh@cs.brown.edu
+Why did I do this?  see http://www.cs.brown.edu/people/lsh/projects.html

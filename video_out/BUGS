@@ -1,0 +1,21 @@
+KNOWN BUGS
+o IDCT sometimes doesn't generate IEEE-compliant values for sparse blocks 
+
+o seg faults when running more than one mpeg_play -loop with shared memory
+  on a multiprocessor machine w/Solaris 2.4. workaround: use -shmem_off
+
+o The control panel sometimes gets confused at the end, knowing it is done 
+thus the "end" button, but still having a play state (and play button
+highlighted), so a "rewind" instantly plays from start.
+
+o -position ignores - offsets  (ie -position -1-1)
+
+o -position should be -geometry
+
+o sometimes crashes on SPARC-10s under tvtwm, try -controls none
+
+o If you compile with -DNDEBUG and some mpegs cause mpeg_play to crash, check
+them out with mpeg_stat -verify
+
+o The argument parsing is very shaky for more than one mpeg to play
+
