@@ -1,6 +1,6 @@
 /*
     flame - cosmic recursive fractal flames
-    Copyright (C) 1992  Scott Draves <spot@cs.cmu.edu>
+    Copyright (C) 1992-2003  Scott Draves <source@flam3.com>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,6 +17,12 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#ifndef rect_included
+#define rect_included
+
+static char *rect_h_id =
+"@(#) $Id: rect.h,v 1.8 2004/03/04 06:35:17 spotspot Exp $";
+
 #include "libifs.h"
 
 
@@ -24,10 +30,11 @@
 #define CMAP_SIZE 256
 
 typedef struct {
-   double        temporal_filter_radius;
+   double         temporal_filter_radius;
+   double         pixel_aspect_ratio;    /* width over height of each pixel */
    control_point *cps;
-   int           ncps;
-   double        time;
+   int            ncps;
+   double         time;
 } frame_spec;
 
 
@@ -40,3 +47,4 @@ extern void render_rectangle(frame_spec *spec, unsigned char *out,
 			     int out_width, int field, int nchan,
 			     void progress(double));
 
+#endif

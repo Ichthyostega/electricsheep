@@ -1,2 +1,5 @@
 usr/bin
 usr/sbin
+usr/share
+usr/share/electricsheep
+usr/share/control-center/Desktop

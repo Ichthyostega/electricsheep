@@ -1,9 +1,64 @@
-electricsheep (2.1-5.1) unstable; urgency=low
+electricsheep (2.5-2) unstable; urgency=low
 
-  * NMU
-  * Fix compile errors on hppa, reintroduced in -5.  Closes: #105058
+  + Fixed builddepends on libpng (Closes: #245816)
 
- -- LaMont Jones <lamont@debian.org>  Sun, 25 Nov 2001 22:55:42 -0700
+ -- Sander Smeenk <ssmeenk@debian.org>  Sun, 25 Apr 2004 17:46:57 +0200
+
+electricsheep (2.5-1) unstable; urgency=low
+
+  + New Upstream Release (Closes: #243760)
+  + vroot.h was updated which Closes: #217492
+  
+ -- Sander Smeenk <ssmeenk@debian.org>  Sun, 18 Apr 2004 15:06:34 +0200
+
+electricsheep (2.4-3) unstable; urgency=low
+  
+  + Fixed dephelper depends (Closes: #216014)
+  + Fixed conflicts with libmpeg2-3-dev (Closes: #207342)
+
+ -- Sander Smeenk <ssmeenk@debian.org>  Sun, 19 Oct 2003 15:59:02 +0200
+
+electricsheep (2.4-2) unstable; urgency=low
+
+  + Correct dependencies (Closes: #206346)
+
+ -- Sander Smeenk <ssmeenk@debian.org>  Sun, 24 Aug 2003 12:31:00 +0200
+   
+electricsheep (2.4-1) unstable; urgency=low
+
+  + New upstream version (Closes: #203965)
+
+ -- Sander Smeenk <ssmeenk@debian.org>  Thu, 14 Aug 2003 10:18:40 +0200
+
+electricsheep (2.3-2) unstable; urgency=low
+
+  + Moved *tif out of /usr/share to /usr/share/electricsheep.
+  + Forgot to close bugs with my previous upload.
+    Closes: #192510
+  + Buildproblems on noni386 are fixed upstream
+    Thanks Julien Lemoine for your effort.
+    Closes: #167963, #182510
+  + Added build dependency to libexpat1-dev (Closes: #185390)
+  + Actually using CFLAGS from debian/rules now
+
+ -- Sander Smeenk <ssmeenk@debian.org>  Tue, 18 Mar 2003 14:44:08 +0100
+
+electricsheep (2.3-1) unstable; urgency=low
+
+  + New upstream.
+  + New debian/ structure, new Standards version, etc.
+
+ -- Sander Smeenk <ssmeenk@debian.org>  Wed, 26 Feb 2003 09:26:08 +0100
+
+electricsheep (2.1-6) unstable; urgency=low
+
+  + 'electricsheep.org' the domain that pointed to the official
+    electricsheep site and server was 'hijacked' from the rightful
+    owner 'Scott Draves'. Really bad this stuff still happens on internet.
+    More information: http://draves.org/ - Sign the petition.
+  * Server URL Changed to reflect new server location
+
+ -- Sander Smeenk <ssmeenk@debian.org>  Sat, 26 Oct 2002 23:45:18 +0200
 
 electricsheep (2.1-5) unstable; urgency=low
 

@@ -2,13 +2,13 @@ Source: electricsheep
 Section: x11
 Priority: optional
 Maintainer: Sander Smeenk <ssmeenk@debian.org>
-Build-Depends: debhelper (>> 3.0.0), xlibs-dev, libjpeg62-dev
-Standards-Version: 3.5.2
+Build-Depends: debhelper (>= 4.0.0), automake1.6, xlibs-dev, libjpeg62-dev, libexpat1-dev, libpng12-dev
+Standards-Version: 3.5.8
 
 Package: electricsheep
 Architecture: any
 Depends: ${shlibs:Depends}, debconf, curl, xloadimage, libjpeg-progs
-Description: screensaver collective dream of sleeping computers
+Description: Screensaver showing collective dream of sleeping computers
  Electric sheep is the collective dream of sleeping computers
  from all over the internet. Less poetically, it is an Internet server and
  xscreensaver module that displays MPEG video of an animated fractal flame.
