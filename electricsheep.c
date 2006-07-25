@@ -1,6 +1,6 @@
 /*
     electricsheep - collaborative screensaver
-    Copyright (C) 1999-2001 Scott Draves <source@electricsheep.org>
+    Copyright (C) 1999-2006 Scott Draves <source@electricsheep.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 */
 
 static char *electricsheep_c_id =
-"@(#) $Id: electricsheep.c,v 1.26 2004/04/13 23:29:33 spotspot Exp $";
+"@(#) $Id: electricsheep.c,v 1.67 2006/07/25 20:45:56 spotspot Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +38,7 @@ static char *electricsheep_c_id =
 #include <expat.h>
 
 #include "config.h"
+#include "getdate.h"
 
 #ifdef HAVE_SYS_MOUNT_H
 #include <sys/mount.h>
@@ -55,19 +56,26 @@ static char *electricsheep_c_id =
 #define STATFS statfs
 #endif
 
-// should be PACKAGE_DATA_DIR
-char *splash_prefix = "/usr/local/share";
+char *splash_prefix = PACKAGE_DATA_DIR "/electricsheep";
+
+#define uniqueid_len 16
+char uniqueid[uniqueid_len+1];
 
 char *proxy_name = 0;
 char *proxy_user = 0;
 
 char *leave_prefix = NULL;
-int leave_max_megabytes = 300;
+int leave_max_megabytes = -1;
 int min_megabytes = 100;
 int reset_fuse_length = 300;
 
-// ick xxx
-#define max_anims 10000
+/* only update cache every 100 sheep =~ 6 minutes. */
+int cache_update_delay = 100;
+
+/* wait this long before going to work */
+int init_delay = 600;
+int init_delay_list = 60;
+int list_freshness = 600;
 
 #define copy_buffer_size 64000
 
@@ -81,23 +89,27 @@ int nplays = 0;
 int nloopplays = 0;
 int reset_fuse = 0;
 
-int nplays_by_id[max_anims];
+int bracket_begin_id = -1;
+int bracket_end_id = -1;
+
+char *logfile = NULL;
+
+time_t bracket_begin_time = (time_t)(-1);
+time_t bracket_end_time = (time_t)(-1);
 
 int nrepeats = 2;
 int nthreads = -1;
 
-char *dream_server = "v2d5.sheepserver.net";
+char *dream_server = "v2d6.sheepserver.net";
 
 // cheeze XXX
 #define max_cp_size 300000
-#define MAXBUF (5*MAXPATHLEN)
-
+#define MAXBUF (5*PATH_MAX)
 
 char *play_prog = "mpeg2dec_onroot";
 char *nick_name = "";
 char *url_name = "";
-
-// would be good to figure out xscreensaver/redhat/suse etc too?  how?
+char *vote_prog = "electricsheep-voter";
 char *client_version = "LNX_" VERSION;
 
 char cps_name[PATH_MAX] = "";
@@ -107,11 +119,13 @@ char fifo_name[PATH_MAX] = "";
 
 char curl_cmd[MAXBUF];
 
-int history_size = 30;
+char id_file[MAXBUF];
+
+int history_size = 300;
 int *path_history;
 int last_sheep = -1;
 int nrepeated = 0;
-int max_repeats = 10;
+int max_repeats = 2;
 
 
 // by default xscreensaver starts us at priority 10.
@@ -127,16 +141,16 @@ char *window_id = NULL;
 int on_root = 0;
 int timeout = 401;
 int tryagain = 696;
-int jpeg_quality = 90;
 
 char *hide_stderr = "2> /dev/null";
 
 int display_anim = 1;
-int voting = 0;
+int voting = 1;
 int nobg = 0;
 int parasite = 0;
 int standalone = 0;
 int read_only = 0;
+int show_errors = 1;
 
 int display_zoomed = 0;
 int use_mplayer = 0;
@@ -155,23 +169,25 @@ int start_id = -1;
 #define max_url_length 1000
 
 typedef struct {
+    int generation;
     int id;
     int deleted;
+    int readonly;
+    int checked;
     int type;
     time_t ctime;
     int size;
     int rating;
     int first;
     int last;
+    char path[PATH_MAX];
     char url[max_url_length];
 } anim_t;
 
 
-int nserver_anims;
-int ncached_anims;
-
-anim_t server_anims[max_anims];
-anim_t cached_anims[max_anims];
+int nserver_anims, ncached_anims;
+anim_t *server_anims = NULL;
+anim_t *cached_anims = NULL;
 
 char *thread_name = NULL;
 
@@ -243,8 +259,9 @@ mysystem(char *cmd, char *msg) {
     if (0) fprintf(stderr, "subprocess; (%s)\n", cmd);
     if (0 != (n = interruptable_system(cmd))) {
 	if (SIGINT != n) {
-	    fprintf(stderr, "subprocess error: %s, %d=%d<<8+%d\n",
-		    msg, n, n>>8, n&255);
+	    if (show_errors)
+		fprintf(stderr, "subprocess error: %s, %d=%d<<8+%d\n",
+			msg, n, n>>8, n&255);
 	    return 1;
 	}
 	fprintf(stderr, "control-c during %s, exiting\n", msg);
@@ -268,6 +285,13 @@ mysystem2(char *cmd, char *msg) {
     }
 }
 
+void timestamp() {
+  time_t t;
+  if (debug) {
+      time(&t);
+      printf("time %s", ctime(&t));
+  }
+}
 
 static void
 encode(char *dst, char *src) {
@@ -289,11 +313,13 @@ print_anims(char *name, anim_t *an, int nanims) {
     int i;
     printf("%s=%d\n", name, nanims);
     for (i = 0; i < nanims; i++) {
-	printf("id=%d deleted=%d type=%d ctime=%d size=%d rating=%d "
-	       "first=%d last=%d url=%s\n",
-	       an[i].id, an[i].deleted, an[i].type, an[i].ctime,
-	       an[i].size, an[i].rating, an[i].first, an[i].last,
-	       an[i].url);
+	printf("gen=%d id=%d deleted=%d readonly=%d checked=%d "
+	       "type=%d ctime=%d size=%d rating=%d "
+	       "first=%d last=%d path=%s url=%s\n",
+	       an[i].generation,
+	       an[i].id, an[i].deleted, an[i].readonly, an[i].checked, an[i].type,
+	       an[i].ctime, an[i].size, an[i].rating, an[i].first,
+	       an[i].last, an[i].path, an[i].url);
     }
 }
 
@@ -309,38 +335,122 @@ filename_is_xxx(char *name) {
     return !(n <= 4 || 0 != strcmp(&name[n-4], ".xxx"));
 }
 
-void
-update_cached_anims(int match_gen) {
+void clear_path(char *path, int generation) {
+    DIR *d;
+    struct dirent *e;
+    char fbuf[PATH_MAX];
+    struct stat sbuf;
+    
+    if (debug) printf("killing generation %d in %s!\n", generation, path);
+
+    d = opendir(path);
+
+    if (!d) {
+	perror(path);
+	cleanup_and_exit(1);
+    }
+
+    while (e = readdir(d)) {
+	int g;
+	snprintf(fbuf, PATH_MAX, "%s%s", path, e->d_name);
+	
+	if (e->d_name[0] == '.') continue;
+	if (0 == strncmp("gen", e->d_name, 3)) {
+	    unlink(fbuf);
+	    continue;
+	}
+	if (filename_is_mpg(e->d_name) || filename_is_xxx(e->d_name)) {
+	    if (1 == sscanf(e->d_name, "%d=", &g) && generation == g) {
+		unlink(fbuf);
+		continue;
+	    }
+	}
+	if (-1 == stat(fbuf, &sbuf)) continue;
+	if (S_ISDIR(sbuf.st_mode)) {
+	    strncat(fbuf, "/", PATH_MAX);
+	    clear_path(fbuf, generation);
+	}
+    }
+    closedir(d);
+}
+
+#define bt_zero_block_size (1 << 10)
+
+int bt_zero_blocks(char *fname, int size) {
+    int fd, i;
+    int piece_size = 1 << 18;
+    char buf[bt_zero_block_size];
+
+    if (-1 == (fd = open(fname, O_RDONLY))) {
+	perror(fname);
+	return 1;
+    }
+
+    while (size >= bt_zero_block_size) {
+	int nread;
+	if (bt_zero_block_size != (nread = read(fd, buf, bt_zero_block_size))) {
+	    perror(fname);
+	    return 1;
+	}
+	for (i = 0; i < bt_zero_block_size; i++)
+	    if (buf[i] != 0) break;
+	if (i == bt_zero_block_size)
+	    return 1;
+	if (size < (piece_size + bt_zero_block_size))
+	    break;
+	if (-1 == lseek(fd, piece_size-bt_zero_block_size, SEEK_CUR)) {
+	    perror(fname);
+	    return 1;
+	}
+	size -= piece_size;
+    }
+    return 0;
+}
+
+    
+
+void update_cached_anims_path(char *path, int match_gen) {
     int write_gen = 0;
     int checked_gen = 0;
     int clear_gen = 0;
-    DIR *d = opendir(leave_prefix);
+    int finished = 0;
+    int ncached_anims_saved = ncached_anims;
+    DIR *d;
     struct dirent *e;
     struct stat sbuf;
     char fbuf[MAXBUF];
+    int old_gen = -1;
 
+    if (debug) printf("updating cache path=%s match_gen=%d\n", path, match_gen);
+
+    d = opendir(path);
     if (!d) {
-	perror(leave_prefix);
+	perror(path);
 	cleanup_and_exit(1);
     }
-    ncached_anims = 0;
     while (e = readdir(d)) {
 	anim_t *an = &cached_anims[ncached_anims];
-	int i;
+	int i, dummy;
 	if (match_gen) {
-	    int old_gen = -1;
 	    if (0 == strncmp("gen", e->d_name, 3)) {
 		sscanf(e->d_name, "gen%d", &old_gen);
 		checked_gen = 1;
-		if (old_gen != generation) {
+		if (old_gen != generation && generation != -1) {
+		    if (debug)
+			printf("old_gen=%d generation=%d\n", old_gen, generation);
 		    write_gen = 1;
 		    clear_gen = 1;
 		}
 	    }
 	}
+	if (e->d_name[0] == '.') continue;
+	if (!strcmp("finished", e->d_name)) {
+	    finished = 1;
+	}
 	if (filename_is_xxx(e->d_name)) {
-	    if (3 != sscanf(e->d_name, "%d=%d=%d.xxx",
-			    &an->id, &an->first, &an->last)) {
+	    if (4 != sscanf(e->d_name, "%d=%d=%d=%d.xxx",
+			    &an->generation, &an->id,
+			    &an->first, &an->last)) {
 		continue;
 	    }
 	    an->deleted = 1;
@@ -350,7 +460,7 @@ update_cached_anims(int match_gen) {
 		}
 	    }
 	    if (i == nserver_anims && nserver_anims) {
-		sprintf(fbuf, "%s%s", leave_prefix, e->d_name);
+		snprintf(fbuf, MAXBUF, "%s%s", path, e->d_name);
 		if (debug)
 		    printf("removing marker %s nserver_anims=%d\n",
 			   fbuf, nserver_anims);
@@ -358,18 +468,37 @@ update_cached_anims(int match_gen) {
 		continue;
 	    }
 	    ncached_anims++;
+	    cached_anims = realloc(cached_anims, (1+ncached_anims)*sizeof(anim_t));
+	    continue;
+	}
+
+	snprintf(fbuf, PATH_MAX, "%s%s", path, e->d_name);
+	if (-1 == stat(fbuf, &sbuf)) continue;
+
+	if (0 == sbuf.st_size) continue;
+
+	if (S_ISDIR(sbuf.st_mode)) {
+	    strncat(fbuf, "/", PATH_MAX);
+	    update_cached_anims_path(fbuf, 0);
 	    continue;
 	}
  
 	if (!filename_is_mpg(e->d_name)) continue;
-	sprintf(fbuf, "%s%s", leave_prefix, e->d_name);
 
-	if (3 != sscanf(e->d_name, "%d=%d=%d.mpg",
-			&an->id, &an->first, &an->last)) {
+	if (4 != sscanf(e->d_name, "%d=%d=%d=%d.mpg",
+			&an->generation, &an->id, &an->first, &an->last)) {
 	    continue;
 	}
-	    
-	if (-1 == stat(fbuf, &sbuf)) continue;
+
+	if ((bracket_begin_id != -1 && an->id < bracket_begin_id) ||
+	    (bracket_end_id != -1 && an->id > bracket_end_id))
+	  continue;
+
+	if ((bracket_begin_time != (time_t)(-1) &&
+	     sbuf.st_ctime < bracket_begin_time) ||
+	    (bracket_end_time != (time_t)(-1) &&
+	     sbuf.st_ctime > bracket_end_time))
+	  continue;
 
 	an->rating = 0;
 	for (i = 0; i < nserver_anims; i++) {
@@ -380,42 +509,48 @@ update_cached_anims(int match_gen) {
 	}
 
 	an->deleted = 0;
+	an->checked = !strcmp(path, leave_prefix);
+	an->readonly = !((sbuf.st_mode & S_IWUSR) &&
+			 (sbuf.st_uid == getuid()));
 	an->size = sbuf.st_size;
 	an->ctime = sbuf.st_ctime;
 	an->url[0] = 0;
 	an->type = 0;
+	strncpy(an->path, path, PATH_MAX);
 	ncached_anims++;
+	cached_anims = realloc(cached_anims, (1+ncached_anims)*sizeof(anim_t));
     }
     closedir(d);
-    if (debug > 1)
-	print_anims("ncached_anims", cached_anims, ncached_anims);
 
-    if (match_gen && !checked_gen) write_gen = 1;
-	
-    if (clear_gen) {
-	DIR *d = opendir(leave_prefix);
-	if (debug) printf("killing all sheep!\n");
-	if (!d) {
-	    perror(leave_prefix);
-	    cleanup_and_exit(1);
-	}
-	while (e = readdir(d)) {
-	    if ((0 == strncmp("gen", e->d_name, 3)) ||
-		filename_is_mpg(e->d_name) ||
-		filename_is_xxx(e->d_name)) {
-		sprintf(fbuf, "%s%s", leave_prefix, e->d_name);
-		unlink(fbuf);
+    if (finished) {
+	int i;
+	for (i = ncached_anims_saved; i < ncached_anims; i++) {
+	    if (!strcmp(cached_anims[i].path, path)) {
+		cached_anims[i].checked = 1;
 	    }
 	}
-	closedir(d);
     }
+
+    if (match_gen && !checked_gen) write_gen = 1;
+
+    if (clear_gen) clear_path(path, old_gen);
 	
     if (write_gen) {
 	if (debug) printf("write gen %d.\n", generation);
-	sprintf(fbuf, "touch %sgen%d", leave_prefix, generation);
+	snprintf(fbuf, MAXBUF, "touch %sgen%d", leave_prefix, generation);
 	mysystem(fbuf, "touch gen");
     }
 }
+
+void update_cached_anims(int match_gen) {
+    ncached_anims = 0;
+    if (NULL == cached_anims)
+	cached_anims = malloc(sizeof(anim_t));
+    update_cached_anims_path(leave_prefix, match_gen);
+    if (debug > 1)
+	print_anims("ncached_anims", cached_anims, ncached_anims);
+}
+
 
 static int
 irandom(int n) {
@@ -424,98 +559,108 @@ irandom(int n) {
 
 void
 cached_file_name(char *buf, anim_t *an) {
-    sprintf(buf, "%s%05d=%05d=%05d.mpg",
-	    leave_prefix, an->id, an->first, an->last);
+    snprintf(buf, MAXBUF, "%s%05d=%05d=%05d=%05d.mpg",
+	    an->path, an->generation, an->id, an->first, an->last);
 }
 
 void
 deleted_file_name(char *buf, anim_t *an) {
-    sprintf(buf, "%s%05d=%05d=%05d.xxx",
-	    leave_prefix, an->id, an->first, an->last);
+    snprintf(buf, MAXBUF, "%s%05d=%05d=%05d=%05d.xxx",
+	    an->path, an->generation, an->id, an->first, an->last);
 }
 
 void
 not_playing() {
     char pbuf[MAXBUF];
     if (!read_only) {
-	sprintf(pbuf, "echo none > %sid", leave_prefix);
+	snprintf(pbuf, MAXBUF, "echo none > %sid", leave_prefix);
 	mysystem(pbuf, "writing none to id file");
     }
 }    
 
 void
-default_background(char *more) {
-    char ob[MAXBUF];
-    char pbuf[MAXBUF];
-    char qbuf[MAXBUF];
-
-    if (nobg || (!on_root && !window_id)) return;
-    if (more)
-	sprintf(ob, "-merge -at 500,0 %s/electricsheep-%s.tif",
-		splash_prefix, more);
-    else
-	ob[0] = 0;
-
-    if (window_id)
-      sprintf(qbuf, "-windowid %s", window_id);
-    else
-      qbuf[0] = 0;
-
-    sprintf(pbuf, "xsetbg %s "
-	    "-border black -at 0,0 %s/electricsheep-splash-0.tif " 
-	    "-merge -center %s/electricsheep-splash-1.tif %s",
-	    qbuf, splash_prefix, splash_prefix, ob);
-    mysystem2(pbuf, "splash0");
-}
-
-#define max_plays 1000
-
-void
 print_stats() {
-    int i, n, j;
-
-    int buck[max_plays];
-
-    for (i = 0; i < max_plays; i++)
-	buck[i] = 0;
-
     printf("nplays = %d, ", nplays);
     printf("nloopplays = %d, ", nloopplays);
     printf("nrestarts = %d, ", nrestarts);
     printf("ncached_anims = %d\n", ncached_anims);
-     
-    printf("nplays_by_id:");
-    for (i = 0; i < max_anims; i++) {
-	if (nplays_by_id[i] != 0) {
-	    printf(" %d:%d", i, nplays_by_id[i]);
-	    if (nplays_by_id[i] < max_plays)
-		buck[nplays_by_id[i]]++;
-	}
-    }
-    printf("\n");
-    
-    printf("zeroes:");
-    for (i = 0; i < ncached_anims; i++) {
-	if (0 == nplays_by_id[cached_anims[i].id]) {
-	    printf(" %d", cached_anims[i].id);
-	    buck[0]++;
-	}
-    }
-    printf("\n");
-
-    n = 0;
-    for (i = 0; i < max_plays; i++) {
-	if (buck[i] > 0) n = i;
-    }
-    
-    printf("histogram:\n");
-    for (i = 0; i <= n; i++) {
-	printf("%4d %4d ", i, buck[i]);
-	for (j = 0; j < buck[i]; j++)
-	    putchar('o');
-	printf("\n");
-    }
 }
+
+int check_for_eddy() {
+    int i, j, c = 0, n = history_size;
+    if (n > 50) n = 50;
+    for (i = 0; i < n; i++) {
+	int diff = 1;
+	if (-1 == path_history[i]) break;
+	if (debug > 1)
+	    printf("edd checking %d %d %d\n", c, i, path_history[i]);
+	for (j = 0; j < i; j++) {
+	    if (path_history[j] == path_history[i])
+		diff = 0;
+	}
+	c += diff;
+	if (c <= i/3) {
+	    if (debug) printf("eddy %d/%d\n", c, i);
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+int touch(char *fname) {
+    FILE *fp = fopen(fname, "w");
+    if (NULL == fp) {
+	return 1;
+    }
+    fclose(fp);
+    return 0;
+}
+
+
+int check_sheep(int idx) {
+    char fbuf[MAXBUF];
+    int j;
+    int zeroes = 0;
+
+    if (cached_anims[idx].checked) {
+	return 0;
+    }
+    /* should search locally until mismatch */
+    for (j = 0; j < ncached_anims; j++) {
+	
+	if (!strcmp(cached_anims[idx].path,
+		    cached_anims[j].path)) {
+	    cached_file_name(fbuf, &cached_anims[j]);
+	    if (bt_zero_blocks(fbuf, cached_anims[j].size)) {
+		if (debug)
+		    printf("zero_blocks %s\n", fbuf);
+		zeroes = 1;
+		break;
+	    }
+	}
+    }
+    if (!zeroes) {
+	char pbuf[MAXBUF];
+	snprintf(pbuf, MAXBUF, "%sfinished", cached_anims[idx].path);
+	if (debug)
+	    printf("marking finished %s\n", pbuf);
+	touch(pbuf);
+    } else if (debug)
+	printf("unfinished %s\n", cached_anims[idx].path);
+    for (j = 0; j < ncached_anims; j++) {
+	if (!strcmp(cached_anims[idx].path,
+		    cached_anims[j].path)) {
+	    if (zeroes)
+		cached_anims[j].deleted = 1;
+	    else
+		cached_anims[j].checked = 1;
+	}
+    }
+    return zeroes;
+}
+
+int *succs = NULL, *lsuccs = NULL;
+int succs_len, lsuccs_len;
 
 /* traverse the graph of anims, and writes the mpeg files into stdin
    of the child.  another process decodes the mpeg and displays it on
@@ -526,8 +671,9 @@ do_display() {
     int i;
     int idx;
     int niters;
-	
-    update_cached_anims(0);
+    static patience=1;
+    char fbuf[MAXBUF];
+
 
     if (start_id >= 0) {
 	current_anim_id = start_id;
@@ -544,49 +690,59 @@ do_display() {
 	    }
 	}
     }
-    if (-1 == idx) {
-        int n = 0;
-        for (i = 0; i < ncached_anims; i++) {
+
+    if (idx != -1 && check_sheep(idx)) idx = -1;
+
+    while (-1 == idx) {
+	int n = 0;
+	for (i = 0; i < ncached_anims; i++) {
 	    if (!cached_anims[i].deleted) n++;
-        }
+	}
 	if (0 == n) {
-	    if (debug) printf("nothing to play, sleeping.\n");
+	    if (patience)
+		fprintf(stderr, "please be patient while the "
+			"first sheep is downloaded...\n");
+	    patience = 0;
 	    not_playing();
-	    default_background(0);
 	    sleep(10);
+	    update_cached_anims(0);
 	    return;
 	}
-	idx = irandom(ncached_anims);
-	while (cached_anims[idx].deleted)
-	    idx = (idx+1)%ncached_anims;
+	do {
+	    idx = irandom(ncached_anims);
+	} while (cached_anims[idx].deleted);
 	
 	current_anim_id = cached_anims[idx].id;
 	if (debug) printf("found new anim id=%d.\n", current_anim_id);
+
+	if (check_sheep(idx)) idx = -1;
     }
+
+
     if (cached_anims[idx].first == cached_anims[idx].last) {
 	niters = nrepeats;
     } else {
 	niters = 1;
     }
 
+
+
     if (1) {
 	// play an anim
 	int h, i;
 	char pbuf[MAXBUF];
-	char fbuf[MAXBUF];
 	FILE *idf;
 
-	if (debug) printf("play anim x=%d id=%d iters=%d.\n",
-			  idx, current_anim_id, niters);
+	if (debug) printf("play anim x=%d id=%d iters=%d path=%s.\n",
+			  idx, current_anim_id, niters, cached_anims[idx].path);
 	if (stats) print_stats();
 
-	nplays_by_id[current_anim_id]++;
 	nplays++;
 	if (cached_anims[idx].first == cached_anims[idx].last) {
 	    nloopplays++;
 	}
 
-	sprintf(fbuf, "%sid.tmp", leave_prefix);
+	snprintf(fbuf, MAXBUF, "%sid.tmp", leave_prefix);
 	idf = fopen(fbuf, "w");
 	if (NULL == idf) {
 	    perror(fbuf);
@@ -598,7 +754,7 @@ do_display() {
 		fprintf(idf, "%d\n", path_history[h]);
 	    }
 	fclose(idf);
-	sprintf(pbuf, "%sid", leave_prefix);
+	snprintf(pbuf, MAXBUF, "%sid", leave_prefix);
 	if (-1 == rename(fbuf, pbuf)) {
 	    fprintf(stderr, "rename %s %s\n", fbuf, pbuf);
 	    perror(pbuf);
@@ -610,10 +766,14 @@ do_display() {
 	}
 	path_history[0] = current_anim_id;
 
-	if (debug) {
+	if (debug > 1) {
 	    printf("history =");
-	    for (h = 0; h < history_size; h++)
+	    for (h = 0; h < history_size; h++) {
+	      if (-1 == path_history[h])
+		break;
+	      else
 		printf(" %d", path_history[h]);
+	    }
 	    printf("\n");
 	}
 
@@ -623,7 +783,7 @@ do_display() {
 	    FILE *mpeg_file;
 	    char copy_buf[copy_buffer_size];
 	    size_t n;
-	  
+
 	    mpeg_file = fopen(fbuf, "r");
 	    if (NULL == mpeg_file) {
 		perror(fbuf);
@@ -653,25 +813,30 @@ do_display() {
     else
       nrepeated = 0;
     last_sheep = current_anim_id;
-    
-    if (0 == reset_fuse-- || nrepeated >= max_repeats) {
+
+    if (0 == reset_fuse-- || nrepeated >= max_repeats || check_for_eddy()) {
       if (debug) printf("reset nrepeated=%d reset_fuse=%d\n", nrepeated, reset_fuse);
       current_anim_id = -1;
       reset_fuse = reset_fuse_length;
     } else {
 	// pick next anim at random from all possible succs,
 	// trying to avoid repeats, and giving priority to loops.
-	int succs[max_anims];
-	int lsuccs[max_anims];
 	int nsuccs = 0;
 	int lnsuccs = 0;
 	int sym = cached_anims[idx].last;
 	int h;
-    
+
+	if (NULL == succs) {
+	    succs = malloc(sizeof(int));
+	    succs_len = 1;
+	    lsuccs = malloc(sizeof(int));
+	    lsuccs_len = 1;
+	}
 
 	for (h = history_size; h >= 0; h--) {
 	    for (i = 0; i < ncached_anims; i++) {
 		if (!cached_anims[i].deleted &&
+		    (cached_anims[i].generation == cached_anims[idx].generation) &&
 		    cached_anims[i].first == sym) {
 		    int hh;
 		    for (hh = 0; hh < h; hh++) {
@@ -679,12 +844,21 @@ do_display() {
 			    break;
 		    }
 		    if (hh == h) {
-			if (debug) printf("succ x=%d id=%d h=%d\n",
-					  i, cached_anims[i].id, h);
-			if (cached_anims[i].first == cached_anims[i].last)
+			if (debug > 1) printf("succ x=%d id=%d h=%d\n",
+					      i, cached_anims[i].id, h);
+			if (cached_anims[i].first == cached_anims[i].last) {
 			    lsuccs[lnsuccs++] = i;
-			else
+			    if (lnsuccs == lsuccs_len) {
+				lsuccs = realloc(lsuccs, (1+lsuccs_len)*sizeof(int));
+				lsuccs_len++;
+			    }
+			} else {
 			    succs[nsuccs++] = i;
+			    if (nsuccs == succs_len) {
+				succs = realloc(succs, (1+succs_len)*sizeof(int));
+				succs_len++;
+			    }
+			}
 		    }
 		}
 	    }
@@ -744,9 +918,11 @@ delete_cached(int size) {
 	best=0;
 
 	for (i = 0; i < ncached_anims; i++) {
-	    if (cached_anims[i].deleted) continue;
-	    if (debug) printf("delete cached total=%g id=%d rating=%d\n",
-			  total, cached_anims[i].id, cached_anims[i].rating);
+	    if (cached_anims[i].deleted ||
+		cached_anims[i].readonly) continue;
+	    if (debug)
+	      printf("delete cached total=%g id=%d rating=%d\n",
+		     total, cached_anims[i].id, cached_anims[i].rating);
     
 	    total += cached_anims[i].size;
 	    if (!oldest_time ||
@@ -762,7 +938,10 @@ delete_cached(int size) {
 	    int fd;
 	    cached_file_name(buf, &cached_anims[best]);
 	    if (debug) printf("deleting %s\n", buf);
-	    unlink(buf);
+	    if (-1 == unlink(buf)) {
+		perror(buf);
+		continue;
+	    }
 	    cached_anims[best].deleted = 1;
 	    deleted_file_name(buf, &cached_anims[best]);
 	    if (-1 == (fd = creat(buf, S_IRUSR|S_IWUSR))) {
@@ -790,32 +969,35 @@ download_anim(int idx) {
     if (debug) printf("download %d id=%d\n", idx, server_anims[idx].id);
     
     cached_file_name(cfb, &server_anims[idx]);
-    sprintf(tfb, "%s.tmp", cfb);
+    snprintf(tfb, MAXBUF, "%s.tmp", cfb);
     strcpy(mpg_name, tfb);
     
-    sprintf(pbuf, "%s --silent --show-error --output %s %s",
-	    curl_cmd, tfb, server_anims[idx].url);
+    snprintf(pbuf, MAXBUF, "%s --output %s %s",
+	     curl_cmd, tfb, server_anims[idx].url);
 
     if (debug) printf("about to %s\n", pbuf);
 
     mysystem(pbuf, "anim download");
 
     if (-1 == stat(tfb, &sbuf)) {
-	fprintf(stderr, "download failed of sheep %d\n",
-		server_anims[idx].id);
+	if (show_errors)
+	    fprintf(stderr, "download failed of sheep %d\n",
+		    server_anims[idx].id);
 	unlink(tfb);
 	mpg_name[0] = 0;
 	sleep(tryagain);
 	return;
     }
     if (sbuf.st_size != server_anims[idx].size) {
-	fprintf(stderr, "incomplete sheep id=%d got=%ld want=%ld\n",
-		server_anims[idx].id, (long)sbuf.st_size,
-		(long)server_anims[idx].size);
+
+      if (debug)
+	printf("deleted incomplete sheep id=%d got=%ld want=%ld\n",
+	       server_anims[idx].id, (long)sbuf.st_size,
+	       (long)server_anims[idx].size);
+
 	unlink(tfb);
 	mpg_name[0] = 0;
 	sleep(tryagain);
-	// xxx limited retries
 	return;
     }
 
@@ -835,10 +1017,10 @@ get_control_points(char *buf, int buf_size) {
     char pbuf[MAXBUF];
     FILE *cp;
   
-    sprintf(pbuf, "%s --max-time %d --silent --show-error 'http://%s/cgi/get.cgi?"
-	    "nick=%s&url=%s&version=%s' | gunzip -c %s",
-	    curl_cmd, timeout, dream_server, nick_buf,
-	    url_buf, client_version, hide_stderr);
+    snprintf(pbuf, MAXBUF, "%s 'http://%s/cgi/get?"
+	    "n=%s&w=%s&v=%s&u=%s' | gunzip -c %s",
+	    curl_cmd, dream_server, nick_buf,
+	    url_buf, client_version, uniqueid, hide_stderr);
 
     if (debug) printf("get_control_points %s\n", pbuf);
 
@@ -881,10 +1063,10 @@ put_image(char *fname, int frame, int anim_id, int gen) {
 	cleanup_and_exit(1);
     }
 
-    sprintf(pbuf, "%s --silent --max-time %d --upload-file %s "
-	    "'http://%s/cgi/put.cgi?frame=%d&id=%d&size=%ld&gen=%d&version=%s'",
-	    curl_cmd, timeout, fname, dream_server, frame, anim_id,
-	    (long)sbuf.st_size, gen, client_version);
+    snprintf(pbuf, MAXBUF, "%s --upload-file %s "
+	    "'http://%s/cgi/put?f=%d&id=%d&s=%ld&g=%d&v=%s&u=%s'",
+	    curl_cmd, fname, dream_server, frame, anim_id,
+	    (long)sbuf.st_size, gen, client_version, uniqueid);
     if (debug) printf("about to put %s\n", pbuf);
     mysystem(pbuf, "put image");
 }
@@ -945,6 +1127,39 @@ character_handler(void *userData, const XML_Char *s, int len) {
     }
 }
 
+void get_args(char *args, char *fname) {
+  FILE *f;
+  int n, i;
+  char lbuf[MAXBUF];
+  f = fopen(fname, "r");
+  if (NULL == f) {
+    perror(fname);
+    cleanup_and_exit(1);
+  }
+  lbuf[0] = 0;
+  fgets(lbuf, MAXBUF, f);
+  fclose(f);
+  n = strlen(lbuf);
+  args[0] = 0;
+  for (i = 0; i < n; i++) {
+    if (0 == strncmp("args=", lbuf+i, 5)) {
+      char *end, *beg = strchr(lbuf+i, '"');
+      if (NULL == beg) {
+	fprintf(stderr, "missing begin quote after args: %s", lbuf);
+	cleanup_and_exit(1);
+      }
+      end = strchr(beg+1, '"');
+      if (NULL == end) {
+	fprintf(stderr, "missing end quote after args: %s", lbuf);
+	cleanup_and_exit(1);
+      }
+      strncpy(args, beg+1, end-beg-1);
+      args[end-beg-1] = 0;
+      break;
+    }
+  }
+}
+
 void
 do_render() {
     char anim_text[max_cp_size];
@@ -955,12 +1170,15 @@ do_render() {
     FILE *fp;
     XML_Parser parser;
 
+    timestamp();
+
     get_control_points(anim_text, max_cp_size);
 
     if (0 == anim_text[0]) {
-	fprintf(stderr,
-		"lost contact with %s, cannot render frames.\n",
-		dream_server);
+	if (show_errors)
+	    fprintf(stderr,
+		    "lost contact with %s, cannot render frames.\n",
+		    dream_server);
 	sleep(tryagain);
 	return;
     }
@@ -981,7 +1199,8 @@ do_render() {
     }
     XML_ParserFree(parser);
     if (server_error) {
-	fprintf(stderr, "server reported error for get: %s\n", server_error_type);
+	fprintf(stderr, "server reported error for get: %s\n",
+		server_error_type);
 	sleep(tryagain);
 	return;
     }
@@ -1006,9 +1225,10 @@ do_render() {
 
     {
 	char b[MAXBUF];
-	char strips[MAXBUF];
-	sprintf(b, "nice -%d env in=%s time=%d out=%s quality=%d anim-flame",
-		nice_level, cps_name, get_frame, jpg_name, jpeg_quality);
+	char args[MAXBUF];
+	get_args(args, cps_name);
+	snprintf(b, MAXBUF, "nice -n %d env in=%s time=%d out=%s %s flam3-animate",
+		nice_level, cps_name, get_frame, jpg_name, args);
 	if (debug) printf("about to render %s\n", b);
 	if (mysystem(b, "render")) {
 	    if (debug) printf("render failed, trying again later\n");
@@ -1042,76 +1262,6 @@ do_render() {
     cps_name[0] = 0;
 }
 
-/* runs voting, passes votes from xscreensaver to server.
-   reads from a named pipe ~/.sheep/vote-fifo */
-void
-do_ui() {
-    char vf_name[MAXBUF];
-    char gb[MAXBUF];
-    FILE *vf;
-
-    sprintf(fifo_name, "%svote-fifo", leave_prefix);
-    unlink(fifo_name);
-	
-    if (-1 == mkfifo(fifo_name, S_IRWXU)) {
-	fprintf(stderr, "error making fifo.\n");
-	perror(fifo_name);
-	cleanup_and_exit(1);
-    }
-
-    vf = fopen(fifo_name, "r");
-    if (NULL == vf) {
-	fprintf(stderr, "error opening fifo.\n");
-	perror(fifo_name);
-	cleanup_and_exit(1);
-    }
-
-    while (NULL != fgets(gb, MAXBUF, vf)) {
-	char pbuf[MAXBUF];
-	char idfn[MAXBUF];
-	int id, vote;
-	FILE *idf;
-	vote = atoi(gb);
-	sprintf(idfn, "%sid", leave_prefix);
-	idf = fopen(idfn, "r");
-	if (NULL == idf) {
-	    fprintf(stderr, "unable to open current id file.\n");
-	    perror(idfn);
-	    continue;
-	}
-	if (NULL == fgets(gb, MAXBUF, idf)) {
-	    fprintf(stderr, "unable to read current id file.\n");
-	    perror(idfn);
-	    continue;
-	}
-	fclose(idf);
-
-	if (0 == strcmp(gb, "none\n")) {
-	    fprintf(stderr,
-		    "ignored because there is nothing to vote for.\n");
-	    continue;
-	}
-
-	id = atoi(gb);
-
-	if (vote == 0) {
-	    if (debug) printf("not voting zero\n");
-	} else {
-	    sprintf(pbuf, "%s --max-time %d --silent --show-error "
-		    "'http://%s/cgi/vote.cgi?id=%d&vote=%d'",
-		    curl_cmd, timeout, dream_server, id, vote);
-	    if (debug) printf("voting %s\n", pbuf);
-	    mysystem2(pbuf, "curl vote");
-	    default_background((vote > 0) ? "smile" : "frown");
-	    sleep(3);
-	    default_background(0);
-	}
-    }
-
-    fclose(vf);
-    unlink(fifo_name);
-}
-
 void
 list_start_element(void *userData, const char *name, const char **atts) {
     int i = 0;
@@ -1136,6 +1286,8 @@ list_start_element(void *userData, const char *name, const char **atts) {
 	    cleanup_and_exit(1);
 	}
 	memset(an, 0, sizeof(an));
+	an->generation = generation;
+	strncpy(an->path, leave_prefix, PATH_MAX);
 	while (atts[i]) {
 	    const char *a = atts[i+1];
 	    if (!strcmp(atts[i], "id")) {
@@ -1161,10 +1313,8 @@ list_start_element(void *userData, const char *name, const char **atts) {
 	    i += 2;
 	}
 	if (!strcmp(state, "done") && (0 == an->type)) {
-	    if (max_anims == nserver_anims+1) {
-		fprintf(stderr, "too many sheep.\n");
-	    } else
-		nserver_anims++;
+	    nserver_anims++;
+	    server_anims = realloc(server_anims, (1+nserver_anims) * sizeof(anim_t));
 	} else if (!strcmp(state, "expunge")) {
 	    char buf[MAXBUF];
 	    if (debug) printf("expunging id=%d.\n", an->id);
@@ -1185,27 +1335,34 @@ list_start_element(void *userData, const char *name, const char **atts) {
     } 
 }
 
-/* download anims, delete old anims, update cache */
-void
-do_download() {
+time_t server_anims_timestamp = -1;
+
+void update_server_anims() {
     char pbuf[MAXBUF];
-    char state[MAXBUF];
     FILE *lf;
     int done;
-    int i, j;
-    int best_rating;
-    time_t best_ctime = 0;
-    int best_anim = -1;
+    XML_Parser parser;
+
+    if (-1 == server_anims_timestamp)
+      server_anims_timestamp = time(0);
+    else {
+      time_t now = time(0);
+      if ((now - server_anims_timestamp) < list_freshness) {
+	if (debug) printf("skipping cgi/list\n");
+	return;
+      }
+      server_anims_timestamp = now;
+    }
 	
-    XML_Parser parser = XML_ParserCreate(NULL);
+    parser = XML_ParserCreate(NULL);
     XML_SetElementHandler(parser, list_start_element, get_end_element);
     XML_SetCharacterDataHandler(parser, character_handler);
     in_message = 0;
     server_error = 0;
     
-    sprintf(pbuf, "%s --max-time %d --silent --show-error 'http://%s/cgi/list.cgi'"
-	    "| gunzip -c %s", curl_cmd, timeout, dream_server,
-	    hide_stderr);
+    snprintf(pbuf, MAXBUF, "%s 'http://%s/cgi/list?v=%s&u=%s'"
+	    "| gunzip -c %s", curl_cmd, dream_server,
+	    client_version, uniqueid, hide_stderr);
 
     if (debug) printf("list %s\n", pbuf);
 
@@ -1217,6 +1374,9 @@ do_download() {
     }
 
     nserver_anims = 0;
+    if (NULL == server_anims)
+	server_anims = malloc(sizeof(anim_t));
+
     generation = -1;
 
     do {
@@ -1246,12 +1406,28 @@ do_download() {
     }
 
     if (-1 == generation) {
-	fprintf(stderr,
-		"lost contact with %s, cannot retrieve sheep.\n",
-		dream_server);
+	if (show_errors)
+	    fprintf(stderr,
+		    "lost contact with %s, cannot retrieve sheep.\n",
+		    dream_server);
 	sleep(tryagain);
 	return;
     }
+}
+
+
+
+/* download anims, delete old anims, update cache */
+void
+do_download() {
+    int i, j;
+    int best_rating;
+    time_t best_ctime = 0;
+    int best_anim = -1;
+
+    timestamp();
+
+    update_server_anims();
 
     if (debug > 1)
 	print_anims("nserver_anims", server_anims, nserver_anims);
@@ -1302,6 +1478,7 @@ make_download_process() {
 	setproctitle("download");
 #endif
 	thread_name = "download";
+	sleep(init_delay_list);
 	while (1) {
 	    do_download();
 	}
@@ -1309,27 +1486,33 @@ make_download_process() {
     /* parent returns */
 }
 
+
 void
 make_ui_process() {
-    
+
+  if (!on_root && !window_id)
+    return;
+
     if (-1 == (ui_pid = fork()))
 	perror("ui fork");
     else if (0 == ui_pid) {
-	/* child */
-#ifdef HAVE_SETPROCTITLE
-	setproctitle("ui");
-#endif
-	thread_name = "ui";
-	while (1) {
-	    do_ui();
-	}
+	char vote_format[MAXBUF];
+
+	execlp(vote_prog, vote_prog,
+	       on_root ? "-3" : window_id,
+	       nick_buf, url_buf, id_file, dream_server,
+	       leave_prefix, uniqueid, NULL);
+	perror("exec vote_prog");
     }
     /* parent returns */
 }
 
+
 void
 make_render_process() {
     pid_t p;
+
+    sleep(init_delay);
 
     while (nthreads-- > 1) { 
 	if (-1 == (p = fork()))
@@ -1356,6 +1539,8 @@ make_render_process() {
 void
 make_display_process()  {
     int h;
+    int cnt;
+    pid_t generator_pid;
     for (h = 0; h < history_size; h++)
 	path_history[h] = -1;
     
@@ -1376,13 +1561,30 @@ make_display_process()  {
 	    int c = 0;
 	    char *wid;
 	    /* child */
-	    sprintf(fps, "%d", frame_rate);
+	    snprintf(fps, 14, "%d", frame_rate);
 	    if (use_mplayer) {
+	      int devnull = open("/dev/null", O_WRONLY);
+	      if (-1 == devnull) {
+		perror("/dev/null");
+		cleanup_and_exit(1);
+	      }
+	      if (-1 == dup2(devnull, STDOUT_FILENO)) {
+		perror("dup2a");
+		cleanup_and_exit(1);
+	      }
+	      if (-1 == dup2(devnull, STDERR_FILENO)) {
+		perror("dup2b");
+		cleanup_and_exit(1);
+	      }
 		argv[c++] = "mplayer";
+		argv[c++] = "-demuxer";
+		argv[c++] = "1";
+		argv[c++] = "-really-quiet";
 		argv[c++] = "-fps";
 		argv[c++] = fps;
 		if (display_zoomed) {
 		    argv[c++] = "-zoom";
+		    argv[c++] = "-fs";
 		}
 		if (on_root) {
 		    argv[c++] = "-rootwin";
@@ -1421,10 +1623,9 @@ make_display_process()  {
 		perror("decoder child dup2 1");
 		cleanup_and_exit(1);
 	    }
-	    close(STDOUT_FILENO);
-	    close(STDERR_FILENO);
 	    execvp(play_prog, argv);
-	    perror("exec play_prog");
+	    perror(play_prog);
+	    cleanup_and_exit(1);
 	} else {
 #ifdef HAVE_SETPROCTITLE
 	    setproctitle("display");
@@ -1435,30 +1636,31 @@ make_display_process()  {
 		perror("fdopen 1");
 		cleanup_and_exit(1);
 	    }
-	    while (1) {
+
+	    if ((generator_pid=fork())==0) {
+	      
+	      update_cached_anims(0);
+	      cnt = 0;
+	      while (1) {
+		timestamp();
 		do_display();
+		if (!standalone && ((++cnt%cache_update_delay) == 0)) {
+		  update_cached_anims(0);
+		}
+	      }
+	      /* child never gets here */
+	    } else {
+	      /* wait end of decoder pid (kill window, e.g. screensaver stop on KDE) */
+	      if (-1 == waitpid(decoder_pid, 0, 0)) {
+		perror("waitpid downloader_pid");
+		exit(1);
+	      }	    
+	      cleanup_and_exit(1);
 	    }
-	    /* child never gets here */
+	    
 	}
     }
     /* parent returns */
-}
-
-
-void
-logo_only() {
-  char pbuf[MAXBUF];
-  char qbuf[MAXBUF];
-  if (!on_root && !window_id) return;
-  if (window_id)
-    sprintf(qbuf, "-windowid %s", window_id);
-  else
-    qbuf[0] = 0;
-  
-  sprintf(pbuf, "xsetbg %s -at 0,0 %s/electricsheep-splash-1.tif",
-	  qbuf, splash_prefix);
-  mysystem2(pbuf, "logo");
-  while (1) sleep(60);
 }
 
 /* set the number of threads by reading /proc/cpuinfo */
@@ -1484,6 +1686,25 @@ auto_nthreads() {
     nthreads = sysconf(_SC_NPROCESSORS_ONLN);
     if (nthreads < 1) nthreads = 1;
 #endif
+}
+
+void parse_bracket(char *arg, int *bracket_id, time_t *bracket_time) {
+  int i, id, n;
+  if (0 == arg || 0 == arg[0]) return;
+  n = strlen(arg);
+  for (i = 0; i < n; i++) {
+    if (!isdigit(arg[i])) {
+      if (-1 == (*bracket_time = get_date(arg, NULL))) {
+	fprintf(stderr, "warning: badly formated date ignored: %s\n", arg);
+      }
+      return;
+    }
+  }
+  if (1 == sscanf(arg, "%d", &id)) {
+    *bracket_id = id;
+    return;
+  }
+  fprintf(stderr, "bad conversion of %s\n", arg);
 }
 
 #define iarg(oname, vname) \
@@ -1522,11 +1743,10 @@ char *help_string =
 "\n"
 "--nick name (credit frames to this name on the server, default is none)\n"
 "--url url (in server credit, link name to this url, default is none)\n"
-"--nthreads N (number of rendering threads, default is same\n"
-"              as the number of CPUs)\n"
+"--nthreads N (number of rendering threads, default is 1)\n"
 "--frame-rate N (frames/second)\n"
 "--timeout N (seconds, default is 401)\n"
-"--tryagain N (seconds between retries to server, default is 396)\n"
+"--tryagain N (seconds between retries to server, default is 696)\n"
 "--server host/path (a hostname, possibly with a path, no leading\n"
 "              \"http://\", default is %s)\n" 
 "--display-anim 0/1 (invisibility if 0, default 1)\n"
@@ -1535,7 +1755,7 @@ char *help_string =
 "--reset-fuse N (maximum number of transitions before resetting\n"
 "               to avoid loops, -1 means never, default is 300)\n"
 "--max-megabytes N (maximum disk space used to save anims in megabytes,\n"
-"               default is 100, 0 means no limit)\n"
+"               default is 1000, 0 means no limit)\n"
 "--min-megabytes N (minimum disk space to leave free in megabytes,\n"
 "               default is 100, 0 means no limit)\n"
 "--nice n (priority adjustment for render process, default 10)\n"
@@ -1546,17 +1766,23 @@ char *help_string =
 "--root 0/1 (display on root window, default 0)\n"
 "-window-id id (display in an existing window, note single dash!)\n"
 "--debug 0/1 (prints additional info)\n"
-"--voting 0/1 (enables voting, default 0)\n"
+"--voting 0/1 (enables voting, default 1)\n"
 "--anim-only 0/1 (leave background untouched, default 0)\n"
 "--mplayer 0/1 (use mplayer instead of the built-in decoder, default 0)\n"
 "--zoom 0/1 (zoom to fullscreen, default 0)\n"
 "--player exec_name (use the specified decoder)\n"
 "--history N (length of history to keep in sheep, default 30)\n"
+"--bracket-begin id/date (play no sheep before this one or this time)\n"
+"--bracket-end id/date (play no sheep after this one or this time)\n"
+"--data-dir dir (directory to find splash images and other data files)\n"
+"--logfile file (file to write the log instead of stdout)\n"
 ;
 
 void
 flags_init(int *argc, char ***argv) {
     char *arg0 = (*argv)[0];
+    char *bracket_begin = 0;
+    char *bracket_end = 0;
     while (*argc > 1 &&
 	   (*argv)[1][0] == '-') {
 	char *o = (*argv)[1];
@@ -1584,21 +1810,60 @@ flags_init(int *argc, char ***argv) {
 	else iarg("--debug", debug)
 	else sarg("--player", play_prog)
 	else sarg("--proxy", proxy_name)
+	else sarg("--data-dir", splash_prefix)
 	else iarg("--start-sheep", start_id)
 	else sarg("--proxy-user", proxy_user)
 	else sarg("-window-id", window_id)
 	else iarg("--root", on_root)
 	else iarg("--voting",voting)
+	else iarg("--read-only",read_only)
+	else iarg("--show-errors",show_errors)
 	else iarg("--anim-only",nobg)
 	else iarg("--mplayer",use_mplayer)
 	else iarg("--zoom",display_zoomed)
 	else iarg("--history",history_size)
+	else sarg("--bracket-begin",bracket_begin)
+	else sarg("--bracket-end",bracket_end)
+	else sarg("--logfile",logfile)
 	else {
 	    fprintf(stderr, "bad option: %s, try --help\n", o);
 	    exit(1);
 	}
     }
     (*argv)[0] = arg0;
+
+    parse_bracket(bracket_begin, &bracket_begin_id, &bracket_begin_time);
+    parse_bracket(bracket_end, &bracket_end_id, &bracket_end_time);
+
+    if (window_id && strlen(window_id) > 20) {
+	fprintf(stderr, "window-id too long: %s.\n", window_id);
+	exit(1);
+    }
+
+    if (leave_prefix && strlen(leave_prefix) > PATH_MAX) {
+	fprintf(stderr, "save-dir too long: %s.\n", leave_prefix);
+	exit(1);
+    }
+	
+    if (splash_prefix && strlen(splash_prefix) > PATH_MAX) {
+	fprintf(stderr, "data-dir too long: %s.\n", splash_prefix);
+	exit(1);
+    }
+
+    if (proxy_user && strlen(proxy_user) > 100) {
+	fprintf(stderr, "proxy-user too long: %s.\n", proxy_user);
+	exit(1);
+    }
+
+    if (proxy_name && strlen(proxy_name) > 100) {
+	fprintf(stderr, "proxy-name too long: %s.\n", proxy_name);
+	exit(1);
+    }
+
+    if (dream_server && strlen(dream_server) > 100) {
+	fprintf(stderr, "server too long: %s.\n", dream_server);
+	exit(1);
+    }
 
     if (nice_level < -20) {
 	fprintf(stderr, "nice level must be -20 or greater, not %d.\n",
@@ -1627,7 +1892,9 @@ flags_init(int *argc, char ***argv) {
     path_history = malloc(sizeof(int) * history_size);
 
     if (-1 == nthreads) {
-	auto_nthreads();
+	nthreads = 1;
+    } else if (0 > nthreads) {
+        auto_nthreads();
     }
 
     if (debug) {
@@ -1641,18 +1908,23 @@ flags_init(int *argc, char ***argv) {
 	    fprintf(stderr, "HOME envar not defined\n");
 	    cleanup_and_exit(1);
 	}
-	  
-	sprintf(b, "%s/.sheep/", hom);
+	if (strlen(hom) > PATH_MAX) {
+	    fprintf(stderr, "HOME envar too long: %s.\n", hom);
+	    cleanup_and_exit(1);
+	}
+	snprintf(b, MAXBUF, "%s/.sheep/", hom);
 	leave_prefix = strdup(b);
     } else if (leave_prefix[strlen(leave_prefix)-1] != '/') {
 	char b[MAXBUF];
-	sprintf(b, "%s/", leave_prefix);
+	snprintf(b, MAXBUF, "%s/", leave_prefix);
 	leave_prefix = strdup(b);
     }
 
+    snprintf(id_file, MAXBUF, "%sid", leave_prefix);
+
     if (1) {
 	char b[MAXBUF];
-	sprintf(b, "mkdir -p %s", leave_prefix);
+	snprintf(b, MAXBUF, "mkdir -p %s", leave_prefix);
 	mysystem(b, "mkdir leave prefix");
     }
 
@@ -1688,7 +1960,7 @@ do_lock() {
 
     struct flock fl;
   
-    sprintf(fn, "%slock", leave_prefix);
+    snprintf(fn, MAXBUF, "%slock", leave_prefix);
     if (-1 == (fd = creat(fn, S_IRWXU))) {
 	perror(fn);
 	cleanup_and_exit(1);
@@ -1713,6 +1985,32 @@ do_lock() {
     /* leave the file open & locked until our process terminates */
 }
 
+/* 64 random bits encoded as ascii */
+void set_uniqueid() {
+  static char *rdevice = "/dev/urandom";
+  long d[2];
+  int i, rfd;
+  struct timeval tv;
+
+  if (debug) printf("setting unique id.\n");
+  rfd = open(rdevice, 0);
+  if (-1 == rfd) {
+    perror(rdevice);
+    exit(1);
+  }
+  if (8 != read(rfd, (void *) d, 8)) {
+    perror(rdevice);
+    exit(1);
+  }
+  if (-1 == gettimeofday(&tv, NULL)) {
+    perror("gettimeofday");
+    exit(1);
+  }
+  d[0] ^= tv.tv_sec;
+  d[1] ^= tv.tv_usec;
+  snprintf(uniqueid, uniqueid_len+1, "%08X%08X", d[0], d[1]);
+}
+
 int
 main(int argc, char **argv) {
     int n = 0;
@@ -1732,32 +2030,103 @@ main(int argc, char **argv) {
     signal(SIGTERM, handle_sig_term);
     signal(SIGINT, handle_sig_term);
 
-    if (1) {
-	int i;
-	for (i = 0; i < max_anims; i++)
-	    nplays_by_id[i] = 0;
-    }
-	
     flags_init(&argc, &argv);
+
+    if (1) {
+      /* read rc file */
+      FILE *frc;
+      char tbuf[MAXBUF];
+      char pbuf[MAXBUF];
+      int changed = 0;
+
+      snprintf(pbuf, MAXBUF, "%src", leave_prefix);
+      frc = fopen(pbuf, "rb");
+      if (NULL != frc) {
+	int tlmm;
+	if (1 == fscanf(frc, "%d\n", &tlmm)) {
+	  if (-1 == leave_max_megabytes) {
+	    leave_max_megabytes = tlmm;
+	  } else if (leave_max_megabytes != tlmm) {
+	    changed = 1;
+	  }
+	} else {
+	  fprintf(stderr, "warning: could not parse line 1 of %s. fixed.\n",
+		  pbuf);
+	  changed = 1;
+	}
+	uniqueid[0] = 0;
+	if (NULL == fgets(uniqueid, uniqueid_len+1, frc) ||
+	    strlen(uniqueid)!=uniqueid_len) {
+	  fprintf(stderr, "warning: could not parse line 2 of %s. fixed.\n",
+		  pbuf);
+	  set_uniqueid();
+	  changed = 1;
+	}
+	fclose(frc);
+      } else {
+	set_uniqueid();
+	changed = 1;
+      }
+
+      if (0 > leave_max_megabytes) {
+	leave_max_megabytes = 1000;
+	changed = 1;
+      }
+
+      /* write rc file */
+      if (changed) {
+	  snprintf(tbuf, MAXBUF, "%src.tmp", leave_prefix);
+	if (frc = fopen(tbuf, "wb")) {
+	  fprintf(frc, "%d\n%s\n", leave_max_megabytes, uniqueid);
+	  fclose(frc);
+	  if (-1 == rename(tbuf, pbuf)) {
+	    perror(pbuf);
+	  }
+	} else {
+	  perror(tbuf);
+	}	  
+      }
+    }
+
+
+    if (logfile && logfile[0]) {
+	if (NULL == freopen(logfile, "a", stdout)) {
+	    perror(logfile);
+	}
+	setlinebuf(stdout);
+	if (NULL == freopen(logfile, "a", stderr)) {
+	    perror(logfile);
+	}
+	setlinebuf(stderr);
+    }
+
+    if (debug) {
+	printf("=====================================\n"
+	       "electric sheep v%s\n", VERSION);
+	timestamp();
+    }
 
     do_lock();
 
     reset_fuse = reset_fuse_length;
 
     if (proxy_name) {
-	sprintf(curl_cmd, "nice -%d curl --proxy %s",
+	snprintf(curl_cmd, MAXBUF, "nice -n %d curl --proxy %s",
 		nice_level, proxy_name);
 	if (proxy_user) {
 	  strcat(curl_cmd, " --proxy-user ");
 	  strcat(curl_cmd, proxy_user);
 	}
     } else
-	sprintf(curl_cmd, "nice -%d curl", nice_level);
+	snprintf(curl_cmd, MAXBUF, "nice -n %d curl", nice_level);
+    strcat(curl_cmd, " --silent");
+    if (show_errors) {
+	strcat(curl_cmd, " --show-error");
+    }
 
     srandom(time(0));
 
     not_playing();
-    default_background(0);
 
     if (display_anim) {
         make_display_process();

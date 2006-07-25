@@ -1,6 +1,6 @@
 .TH ElectricSheep 1 "" "X Version 11"
 .SH NAME
-electricsheep - a distributed screen-saver (version 2.6.8)
+electricsheep - a distributed screen-saver (version @VERSION@)
 .SH SYNOPSIS
 .B electricsheep
 [\--nick \fIname\fP]

@@ -39,8 +39,14 @@ extern int window_id;
 #include <X11/extensions/XShm.h>
 #include <inttypes.h>
 #include <sys/time.h>
+#include <png.h>
+#include <setjmp.h>
 
 #include "vroot.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/param.h>
 
 /* since it doesn't seem to be defined on some platforms */
 int XShmGetEventBase (Display *);
@@ -92,10 +98,10 @@ typedef struct x11_instance_s {
 #endif
 } x11_instance_t;
 
+static uint32_t frame_counter = 0;
 
 static void frame_rate_delay()
 {
-    static uint32_t frame_counter = 0;
     static struct timeval tv_rate;
     struct timeval tv_end;
     extern int target_fps;
@@ -119,6 +125,346 @@ static void frame_rate_delay()
 
     tv_rate = tv_end;
 }
+
+static char *overlay_luma = NULL;
+static char *overlay_alpha = NULL;
+static int overlay_width;
+static int overlay_height;
+static int overlay_start_fade_in_frame;
+static int overlay_end_fade_out_frame;
+static int overlay_end_fade_in_frame;
+static int overlay_end_hold_frame;
+
+static int fifo_fd;
+static void fifo_init()
+{
+    char *hom = getenv("HOME");
+    char fname[MAXPATHLEN];
+
+
+    /* assuming the cache dir is ~/.sheep is wrong xxx */
+    sprintf(fname, "%s/.sheep/overlay_fifo", hom);
+
+    unlink(fname);
+
+    if (-1 == mkfifo(fname, S_IRWXU)) {
+	perror(fname);
+	fifo_fd = -1;
+    } else if (-1 == (fifo_fd = open(fname, O_NONBLOCK))) {
+	perror(fname);
+	fifo_fd = -1;
+    }
+
+
+}
+
+#define SIG_CHECK_SIZE 8
+
+static void overlay_read_png(FILE *ifp)
+{
+  unsigned char sig_buf [SIG_CHECK_SIZE];
+  png_struct *png_ptr;
+  png_info *info_ptr;
+  png_byte **png_image = NULL;
+  int linesize, x, y;
+  unsigned char *p, *q;
+
+  if (fread (sig_buf, 1, SIG_CHECK_SIZE, ifp) != SIG_CHECK_SIZE) {
+    fprintf (stderr, "input file empty or too short\n");
+    return;
+  }
+  if (png_sig_cmp (sig_buf, (png_size_t) 0, (png_size_t) SIG_CHECK_SIZE) != 0) {
+    fprintf (stderr, "input file not a PNG file\n");
+    return;
+  }
+
+  png_ptr = png_create_read_struct (PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  if (png_ptr == NULL) {
+    fprintf (stderr, "cannot allocate LIBPNG structure\n");
+    return;
+  }
+  if (setjmp(png_jmpbuf(png_ptr))) {
+     if (png_image) {
+	 for (y = 0 ; y < info_ptr->height ; y++)
+	     free (png_image[y]);
+	 free (png_image);
+     }
+     png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
+     perror("reading file");
+     return;
+  }
+  info_ptr = png_create_info_struct (png_ptr);
+  if (info_ptr == NULL) {
+    png_destroy_read_struct (&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
+    fprintf (stderr, "cannot allocate LIBPNG structures\n");
+    return;
+  }
+
+  png_init_io (png_ptr, ifp);
+  png_set_sig_bytes (png_ptr, SIG_CHECK_SIZE);
+  png_read_info (png_ptr, info_ptr);
+
+  if (8 != info_ptr->bit_depth) {
+    fprintf(stderr, "bit depth type must be 8, not %d.\n",
+	    info_ptr->bit_depth);
+    return;
+  }
+  overlay_width = info_ptr->width;
+  overlay_height = info_ptr->height;
+  if (overlay_luma) {
+    free(overlay_luma);
+    free(overlay_alpha);
+  }
+
+  overlay_luma = malloc(overlay_width * overlay_height);
+  overlay_alpha = malloc(overlay_width * overlay_height);
+  png_image = (png_byte **)malloc (info_ptr->height * sizeof (png_byte*));
+  linesize = info_ptr->width;
+  switch (info_ptr->color_type) {
+    case PNG_COLOR_TYPE_RGB:
+      linesize *= 3;
+      break;
+    case PNG_COLOR_TYPE_RGBA:
+      linesize *= 4;
+      break;
+    case PNG_COLOR_TYPE_GRAY:
+      break;
+    case PNG_COLOR_TYPE_GRAY_ALPHA:
+      linesize *= 2;
+      break;
+
+  default:
+    fprintf(stderr, "color type must be RGB, RGBA, GRAY, "
+	    "or GRAY_ALPHA not %d.\n",
+	    info_ptr->color_type);
+    return;
+  }
+
+
+  for (y = 0 ; y < info_ptr->height ; y++) {
+    png_image[y] = malloc (linesize);
+  }
+  png_read_image (png_ptr, png_image);
+  png_read_end (png_ptr, info_ptr);
+
+  p = (unsigned char *) overlay_luma;
+  q = (unsigned char *) overlay_alpha;
+  for (y = 0 ; y < info_ptr->height ; y++) {
+    unsigned char *s = png_image[y];
+    for (x = 0 ; x < info_ptr->width ; x++) {
+
+      switch (info_ptr->color_type) {
+      case PNG_COLOR_TYPE_RGB:
+	*p++ = 0.587*s[1] + 0.299*s[0] + 0.114*s[2];
+	*q++ = (s[0]+s[1]+s[2])?255:0;
+	s += 3;
+	break;
+      case PNG_COLOR_TYPE_RGBA:
+	*p++ = 0.587*s[1] + 0.299*s[0] + 0.114*s[2];
+	*q++ = s[3];
+	s += 4;
+	break;
+    case PNG_COLOR_TYPE_GRAY:
+	*p++ = s[0];
+	*q++ = s[0]?255:0;
+	s += 1;
+	break;
+    case PNG_COLOR_TYPE_GRAY_ALPHA:
+	*p++ = s[0];
+	*q++ = s[1];
+	s += 2;
+	break;
+      }
+    }
+  }
+
+  for (y = 0 ; y < info_ptr->height ; y++)
+    free (png_image[y]);
+  free (png_image);
+  png_destroy_read_struct (&png_ptr, &info_ptr, (png_infopp)NULL);  
+}
+
+static void overlay_read_ppm(FILE *fin)
+{
+    int c, i, j;
+#if 0
+    short *p;
+#else
+    unsigned char *p, *q;
+#endif
+
+    fscanf(fin, "P6\n");
+    c = fgetc(fin);
+    if ('#' == c) {
+	while ('\n' != (c = fgetc(fin)))
+	    ;
+    } else
+	ungetc(c, fin);
+    fscanf(fin, "%d %d\n", &overlay_width, &overlay_height);
+    fscanf(fin, "%d\n", &c);
+    if (overlay_luma) {
+	free(overlay_luma);
+	free(overlay_alpha);
+    }
+#if 0
+    overlay_luma = malloc(overlay_width * overlay_height * 2);
+    p = (short *) overlay_luma;
+#else
+    overlay_luma = malloc(overlay_width * overlay_height);
+    p = (unsigned char *) overlay_luma;
+    overlay_alpha = malloc(overlay_width * overlay_height);
+    q = (unsigned char *) overlay_alpha;
+#endif
+    for (i = 0; i < overlay_height; i++)
+	for (j = 0; j < overlay_width; j++) {
+	    int r = fgetc(fin);
+	    int g = fgetc(fin);
+	    int b = fgetc(fin);
+#if 0
+	    *p++ = ((r>>3)<<11) | ((g>>2)<<5) | (b>>3);
+#else
+	    *p++ = 0.587*g + 0.299*r + 0.114*b;
+	    *q++ = (r+g+b)?255:0;
+#endif
+	}
+}
+
+static void overlay_read_image(char *name)
+{
+    char fname[MAXPATHLEN];
+    int fade_in_frames;
+    int fade_out_frames;
+    int hold_frames;
+    FILE *fin;
+
+    sscanf(name, "%s %d %d %d", fname, &fade_in_frames, &hold_frames, &fade_out_frames);
+
+    fin = fopen(fname, "r");
+    if (NULL == fin) {
+	perror(fname);
+	return;
+    }
+
+    if (strlen(fname) > 4 && !strcmp(fname+strlen(fname)-4, ".ppm"))
+      overlay_read_ppm(fin);
+    else
+      overlay_read_png(fin);
+
+    fclose(fin);
+
+    overlay_start_fade_in_frame = frame_counter;
+    overlay_end_fade_in_frame =  frame_counter + fade_in_frames;
+    overlay_end_hold_frame = overlay_end_fade_in_frame + hold_frames;
+    overlay_end_fade_out_frame = overlay_end_hold_frame + fade_out_frames;
+}
+
+#define bufsize 1000
+
+static void
+overlay_draw(x11_instance_t *instance, x11_frame_t *frame)
+{
+
+  if (fifo_fd > 0) {
+    int nbytesread;
+    char buf[bufsize];
+    if (-1 == (nbytesread = read(fifo_fd, buf, bufsize))) {
+      perror("fifo read");
+      close(fifo_fd);
+      fifo_fd = -1;
+    }
+    if (nbytesread > 0) {
+      int i;
+      int cmd_start = -1, cmd_end = -1;
+      for (i = 0; i < bufsize; i++) {
+	if ('!' == buf[i]) {
+	  cmd_start = i;
+	  for (; i < bufsize; i++) {
+	    if ('\n' == buf[i]) {
+	      cmd_end = i;
+	      break;
+	    }
+	  }
+	  break;
+	}
+      }
+      if (cmd_start >= 0 && cmd_end >= 0) {
+	buf[cmd_end] = 0;
+	overlay_read_image(buf + cmd_start + 1);
+      }
+    }
+  }
+
+  if (overlay_luma && frame_counter > overlay_end_fade_out_frame) {
+    free(overlay_luma);
+    free(overlay_alpha);
+    overlay_luma = 0;
+    overlay_alpha = 0;
+  }
+
+  if (overlay_luma) {
+    int i, j;
+    int voffset, hoffset;
+    int vsize, hsize;
+    double fraction;
+#if 0
+    short *ximg_base = (short *) frame->ximage->data;
+#else
+    unsigned char *ximg_base =
+      (unsigned char *) frame->xvimage->data;
+#endif
+
+    if (frame_counter < overlay_end_fade_in_frame) {
+      fraction = 1.0 -
+	((overlay_end_fade_in_frame - frame_counter) / 
+	 (double)(overlay_end_fade_in_frame - overlay_start_fade_in_frame));
+    } else if (frame_counter < overlay_end_hold_frame) {
+      fraction = 1.0;
+    } else {
+      fraction = 
+	((overlay_end_fade_out_frame - frame_counter) / 
+	 (double)(overlay_end_fade_out_frame - overlay_end_hold_frame));
+    }
+
+    if (overlay_width >= instance->width) {
+      hoffset = 0;
+      hsize = instance->width;
+    } else {
+      hoffset = (instance->width - overlay_width)/2;
+      hsize = overlay_width;
+    }
+    if (overlay_height >= instance->height) {
+      voffset = 0;
+      vsize = instance->height;
+    } else {
+      voffset = (instance->height - overlay_height)/2;
+      vsize = overlay_height;
+    }
+    for (i = 0; i < vsize; i++) {
+      unsigned char *ximg_row = ximg_base + hoffset +
+	(i + voffset) * instance->width;
+      unsigned char *ovrl_row =
+	((unsigned char *)overlay_luma) + i * overlay_width;
+      unsigned char *ovrl_alpha_row =
+	((unsigned char *)overlay_alpha) + i * overlay_width;
+      for (j = 0; j < hsize; j++) {
+	int src = *ovrl_row++;
+	int dst = *ximg_row;
+	double ff = fraction * *ovrl_alpha_row++ * 1.0/255.0;
+	*ximg_row++ = src * ff + dst * (1.0-ff);
+      }
+    }
+  }
+		
+#if 0
+  // evil 565=16bpp format
+  0xffff;  // white
+  0x001f;  // blue
+  0x07e0;  // green
+  0xf800;  // red
+#endif
+
+}
+
 
 static int open_display (x11_instance_t * instance)
 {
@@ -183,10 +529,12 @@ static int open_display (x11_instance_t * instance)
     instance->displayheight = instance->height;
 
     if (window_id == -3) {
+      /* display zoomed on the (virtual) root window */
       instance->window = DefaultRootWindow (instance->display);
       instance->displaywidth = DisplayWidth(instance->display, DefaultScreen (instance->display));
       instance->displayheight = DisplayHeight(instance->display, DefaultScreen (instance->display));
     } else if (window_id == -2) {
+      /* display non-zoomed on the (virtual) root window */
       int w, h;
       w = DisplayWidth(instance->display, DefaultScreen (instance->display));
       h = DisplayHeight(instance->display, DefaultScreen (instance->display));
@@ -194,6 +542,9 @@ static int open_display (x11_instance_t * instance)
       instance->corner_x = (w - instance->width)/2;
       instance->corner_y = (h - instance->height)/2;
     } else if (window_id == -1) {
+      XTextProperty xname;
+      char *nm = "Electric Sheep";
+      /* create a window the same size as the video */
       instance->window =
 	XCreateWindow (instance->display,
 		       DefaultRootWindow (instance->display),
@@ -202,8 +553,15 @@ static int open_display (x11_instance_t * instance)
 		       InputOutput, instance->vinfo.visual,
 		       (CWBackPixmap | CWBackingStore | CWBorderPixel |
 			CWEventMask | CWColormap), &attr);
+      XStringListToTextProperty(&nm, 1, &xname);
+      XSetWMName(instance->display, instance->window, &xname);
     } else {
-      instance->window = window_id;
+	/* zoomed to fit the window specified on the command line */
+	XWindowAttributes xgwa;
+	XGetWindowAttributes(instance->display, window_id, &xgwa);
+	instance->window = window_id;
+	instance->displaywidth = xgwa.width;
+	instance->displayheight = xgwa.height;
     }
 
     instance->gc = XCreateGC (instance->display, instance->window, 0,
@@ -292,7 +650,7 @@ static vo_frame_t * x11_get_frame (vo_instance_t * _instance, int flags)
     while (frame->wait_completion)
 	x11_event (instance);
 
-    frame->rgb_ptr = frame->ximage->data;
+    frame->rgb_ptr = (uint8_t *) frame->ximage->data;
     frame->rgb_stride = frame->ximage->bytes_per_line;
     frame->yuv_stride = instance->width;
     if ((flags & VO_TOP_FIELD) == 0)
@@ -323,10 +681,12 @@ static void x11_field (vo_frame_t * _frame, int flags)
     x11_frame_t * frame;
 
     frame = (x11_frame_t *) _frame;
-    frame->rgb_ptr = frame->ximage->data;
+    frame->rgb_ptr = (uint8_t *) frame->ximage->data;
     if ((flags & VO_TOP_FIELD) == 0)
 	frame->rgb_ptr += frame->ximage->bytes_per_line;
 }
+
+
 
 static void x11_draw_frame (vo_frame_t * _frame)
 {
@@ -335,6 +695,8 @@ static void x11_draw_frame (vo_frame_t * _frame)
 
     frame = (x11_frame_t *) _frame;
     instance = (x11_instance_t *) frame->vo.instance;
+
+    overlay_draw(instance, frame);
 
     XShmPutImage (instance->display, instance->window, instance->gc,
 		  frame->ximage, 0, 0, instance->corner_x, instance->corner_y,
@@ -375,7 +737,7 @@ static int x11_alloc_frames (x11_instance_t * instance)
 	    return 1;
 	}
 
-	instance->frame[i].ximage->data = alloc;
+	instance->frame[i].ximage->data = (char *) alloc;
 	alloc += size;
     }
 
@@ -480,6 +842,8 @@ static void xv_draw_frame (vo_frame_t * _frame)
     frame = (x11_frame_t *) _frame;
     instance = (x11_instance_t *) frame->vo.instance;
 
+    overlay_draw(instance, frame);
+
     XvShmPutImage (instance->display, instance->port, instance->window,
 		   instance->gc, frame->xvimage, 0, 0,
 		   instance->width, instance->height,
@@ -524,7 +888,7 @@ static int xv_check_extension (x11_instance_t * instance)
 	return 1;
     }
 
-    XvQueryAdaptors (instance->display, instance->window, &adaptors,
+    XvQueryAdaptors (instance->display, instance->window, (unsigned int *) &adaptors,
 		     &adaptorInfo);
 
     for (i = 0; i < adaptors; i++)
@@ -567,7 +931,7 @@ static int xv_alloc_frames (x11_instance_t * instance)
 	instance->frame[i].wait_completion = 0;
 	instance->frame[i].xvimage =
 	    XvShmCreateImage (instance->display, instance->port, FOURCC_YV12,
-			      alloc, instance->width, instance->height,
+			      (char *) alloc, instance->width, instance->height,
 			      &(instance->shminfo));
 	if ((instance->frame[i].xvimage == NULL) ||
 	    (instance->frame[i].xvimage->data_size != 6 * size)) { /* FIXME */
@@ -606,6 +970,8 @@ static int common_setup (x11_instance_t * instance, int width, int height,
 
     if (open_display (instance))
 	return 1;
+
+    fifo_init();
 
 #ifdef LIBVO_XV
     if (xv && (! (xv_check_extension (instance)))) {
