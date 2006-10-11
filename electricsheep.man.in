@@ -1,0 +1,191 @@
+.TH ElectricSheep 1 "" "X Version 11"
+.SH NAME
+electricsheep - a distributed screen-saver (version @VERSION@)
+.SH SYNOPSIS
+.B electricsheep
+[\--nick \fIname\fP]
+[\--url \fIurl\fP]
+[\--nrepeats \fIN\fP]
+[\--max-repeats \fIN\fP]
+[\--frame-rate \fIN\fP]
+[\--nthreads \fIN\fP]
+[\--server \fIhost/path\fP]
+[\--display-anim \fI0/1\fP]
+[\--show-errors \fI0/1\fP]
+[\--standalone \fI0/1\fP]
+[\--save-dir \fIpath\fP]
+[\--reset-fuse \fIN\fP]
+[\--history \fIN\fP]
+[\--nice \fIN\fP]
+[\--proxy \fIURL\fP]
+[\--proxy-user \fIuser:password\fP]
+[\--timeout \fIN\fP]
+[\--start-sheep \fIN\fP]
+[\--root \fI0/1\fP]
+[\--voting \fI0/1\fP]
+[\--anim-only \fI0/1\fP]
+[\--debug \fI0/1\fP]
+[\--player \fIprogram\fP]
+[\--mplayer \fI0/1\fP]
+[\--zoom \fI0/1\fP]
+[\--player \fIprogram\fP]
+[\-window-id \fIid\fP]
+[\--bracket-begin \fIdate/id\fP]
+[\--bracket-end \fIdate/id\fP]
+[\--data-dir \fIdir\fP]
+[\--logfile \fIfile\fP]
+.SH DESCRIPTION
+
+
+Electric Sheep is a distributed screen-saver that harnesses idle computers into a render farm with the purpose of animating and evolving artificial life-forms.  It requires a high-bandwidth, always-on connection to the internet such as DSL or cable-modem.
+
+The first time it runs, it normally takes about 10 minutes before a sheep (as the animations are called) is downloaded and displayed.  After that, it should come up immediately.  You can use BitTorrent to download more sheep faster, see the web site below for how.
+
+If you have installed the hacked xscreensaver that supports passing key-presses onto the graphics hack and this feature is enabled, then pressing the up (or down) arrow-key transmits a vote for (or against) the currently displayed sheep to the server.  Vote for the sheep you like, and they will mate, reproduce, and evolve!
+
+The shepherds (those who wrote the software and run the server) use some of the sheep for commercial purposes in order to support the network and develop it further.  For example there's the Spotworks DVD, and "Dreams in High Fidelity", a painting that evolves.  Some jobs rendered by the network may be for images or animations which are not sheep at all, and will not appear in the screen-saver.
+
+Users may not subvert the protocol of the sheep server.  If you want to change how the client communicates with the server, contact the server's administrators first.
+
+.SH OPTIONS
+.TP 8
+.B \--anim-only \fI0/1\fP
+If 1 then do not clear the background and display the logo.  The
+default is 0. 
+.TP 8
+.B \--bracket-begin \fIdate/id\fP
+Play no sheep before this one or this time.
+.TP 8
+.B \--bracket-end \fIdate/id\fP
+Play no sheep after this one or this time.
+.TP 8
+.B \--data-dir \fIdir\fP
+Set the directory to find splash images and other data files.
+.TP 8
+.B \--debug \fI0/1\fP
+If 1 then print copious debug information.  The default is 0.
+.TP 8
+.B \--display-anim \fI0/1\fP
+If 1 then display the animated sheep, if 0 then do not.  Not
+displaying the sheep allows one to contribute rendering more rendering
+cycles because no CPU time is spent on display.  It also allows one to
+run on a computer without an X display at all.  The default is 1.
+.TP 8
+.B \--frame-rate \fIN\fP
+Specify the frame-rate for sheep display in frames per second.  The
+default is 23.  If your client is having trouble completing frames
+because it is spending all its CPU time in the display process then
+decreasing this might help.  Or increase it if you have extra CPU for
+smoother display.
+.TP 8
+.B \--history \fIN\fP
+Set the number of sheep of history to keep.  Sheep in the history are
+not repeated if possible.  The history is written to a file named "id"
+in the .sheep directory, with one sheep id per line, with the most
+recent one first.  The default history length is 30.
+.TP 8
+.B \--logfile \fIfile\fP
+Write errors and diagnostics to this file instead of stderr and stdout.
+.TP 8
+.B \--max-megabytes \fIN\fP
+Specify the maximum number of megabytes of disk storage to use to
+store sheep (in the directory specified with --save-dir).  The default
+is 1000.  Zero (0) means there is no maximum.
+.TP 8
+.B \--max-repeats \fIN\fP
+Maximum number of times to repeat any sheep.  The default is 3.
+.TP 8
+.B \--mplayer \fI0/1\fP
+If 1 then use MPlayer (http://mplayerhq.hu) instead of the built-in
+mpeg decoder.  The default is 0.
+.TP 8
+.B \--min-megabytes \fIN\fP
+Specify the minimum number of megabytes of disk storage to leave free.
+The default is 1000. Zero (0) means there is no minimum.
+.TP 8
+.B \--nice \fIN\fP
+Specify the priority adjustment for render process and all non-display
+processes.  The default is 10.  Note that xscreensaver normally nices
+the sheep process by 10 already.
+.TP 8
+.B \--nick \fIname\fP
+Specify a nickname.  The server keeps credits the frames according to
+nickname and ranks nicknames according to who contributes the most.
+.TP 8
+.B \--nrepeats \fIN\fP
+Number of times to repeat each sheep.  The default is 2.  Transitions
+between sheep are not repeated.
+.TP 8
+.B \--nthreads \fIN\fP
+Specify the number of rendering threads.  By default there is one (1).
+.TP 8
+.B \--player \fIprogram\fP
+Specify a program to display the sheep.  The default is mpeg2dec_onroot.
+.TP 8
+.B \--proxy \fIURL\fP
+Specify a proxy as per curl(1).
+.TP 8
+.B \--proxy-user \fIuser:password\fP
+Specify a proxy user and password as per curl(1).
+.TP 8
+.B \--reset-fuse \fIN\fP
+Specify the maximum number of sheep to display in continuous fasion
+before resetting and displaying a random sheep.  The default is 300.
+.TP 8
+.B \--root \fI0/1\fP
+If 1 then display on the root window.  The default is 0 and to display
+in a new window.
+.TP 8
+.B \--save-dir \fIpath\fP
+Specifies a directory to save the sheep in.  The default is ~/.sheep.
+.TP 8
+.B \--server \fIhost/path\fP
+Specify the server to connect to.  Do not include the leading "http://" or a
+trailing slash.
+.TP 8
+.B \--show-errors \fI0/1\fP
+If 0 then do not report problems connecting to server.  The default is 1.
+.TP 8
+.B \--standalone \fI0/1\fP
+If 1 then run without connecting to the internet at all, just displays
+the sheep already downloaded and do no rendering.  The default is 0.
+.TP 8
+.B \--start-sheep \fIN\fP
+Specify the ID of the sheep to display first.  The default is to
+display a random sheep.
+.TP 8
+.B \--timeout \fIN\fP
+Specify the timeout in seconds for server operations.  The default is
+401.
+.TP 8
+.B \--tryagain \fIN\fP
+Specify the time in seconds to wait before retrying to contact the
+server.  The default is 696.
+.TP 8
+.B \--url \fIname\fP
+Specify a vanity URL to go with with the nickname.
+.TP 8
+.B \--voting \fI0/1\fP
+If 1 then enable the voting interface.  This requires a hacked
+version of xscreensaver as described in the README in the source
+distribution.  The default is 1.
+.TP 8
+.B \-window-id \fIX\fP
+Specify in hex the window ID to draw into.  Note the single leading
+dash (this option's syntax is required by xscreensaver).  The default
+is to display in a new window. If both --root and -window-id are
+specified then -window-id takes precedence.
+.TP 8
+.B \--zoom \fI0/1\fP
+Zoom the sheep to fill the screen.  The default is 0.
+.SH ENVIRONMENT
+.PP
+.TP 8
+.B DISPLAY
+to get the default host and display number.
+.SH SEE ALSO
+.BR X (1),
+.BR xscreensaver (1),
+.BR http://electricsheep.org,
+.SH AUTHOR
+spot aka Scott Draves

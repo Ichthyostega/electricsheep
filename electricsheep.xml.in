@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<screensaver name="electricsheep" _label="ElectricSheep">
+
+  <command arg="--root 1"/>
+
+  <hgroup>
+    <string id="nick" _label="Nickname" arg="--nick %"/>
+    <string id="url" _label="URL" arg="--url %"/>
+  </hgroup>
+
+  <hgroup>
+
+    <number id="framerate" type="spinbutton" arg="--frame-rate %"
+            _label="Frame Rate" low="1" high="100" default="23"/>
+
+    <number id="nrepeats" type="spinbutton" arg="--nrepeats %"
+            _label="Repititions of each Sheep"
+            low="0" high="10" default="2"/>
+
+  </hgroup>
+
+  <hgroup>
+    <boolean id="zoom" _label="Zoom" arg-set="--zoom 1" />
+    <boolean id="hide" _label="No Animation" arg-set="--display-anim 0" />
+    <boolean id="standalone" _label="No Network" arg-set="--standalone 1" />
+    <boolean id="hideerrors" _label="Hide Errors" arg-set="--show-errors 0" />
+  </hgroup>
+
+  <hgroup>
+  <select id="maxmegs">
+     <option id="m100" _label="100 Mbyte cache" arg-set="--max-megabytes 100"/>
+     <option id="m300" _label="300 Mbyte cache" arg-set="--max-megabytes 300"/>
+     <option id="g1" _label="1 Gbyte cache" arg-set="--max-megabytes 1000"/>
+     <option id="g3" _label="3 Gbyte cache" arg-set="--max-megabytes 3000"/>
+     <option id="u" _label="Unlimited" arg-set="--max-megabytes 0"/>
+  </select>
+  </hgroup>
+
+  <hgroup>
+    <string id="brack0" _label="Bracket Begin" arg="--bracket-begin %"/>
+    <string id="brack1" _label="Bracket End" arg="--bracket-end %"/>
+  </hgroup>
+
+  <_description>Electric Sheep is a distributed screen-saver that harnesses idle computers into a render farm with the purpose of animating and evolving artificial life-forms.  It requires a high-bandwidth, always-on connection to the internet such as DSL or cable-modem.
+
+The first time it runs, it normally takes about 10 minutes before a sheep (as the animations are called) is downloaded and displayed.  After that, it should come up immediately.  You can use BitTorrent to download more sheep faster, see the web site below for how.
+
+If you have installed the hacked xscreensaver that supports passing key-presses onto the graphics hack and this feature is enabled, then pressing the up arrow-key transmits a vote for the currently displayed sheep to the server.  Vote for the sheep you like, and they will mate, reproduce, and evolve!
+
+The shepherds (those who wrote the software and run the server) use some of the sheep for commercial purposes in order to support the network and develop it further.  For example there's the Spotworks DVD, and "Dreams in High Fidelity", a painting that evolves.  Some jobs rendered by the network may be for images or animations which are not sheep at all, and will not appear in the screen-saver.
+
+Users may not subvert the protocol of the sheep server.  If you want to change how the client communicates with the server, contact the server's administrators first.
+
+See http://electricsheep.org for more information.  This is version
+@VERSION@.
+
+
+  </_description>
+</screensaver>

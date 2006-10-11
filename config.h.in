@@ -48,9 +48,6 @@
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
-/* pkg data dir */
-#undef PACKAGE_DATA_DIR
-
 /* Define to the full name of this package. */
 #undef PACKAGE_NAME
 
@@ -75,8 +72,11 @@
 /* Version number of package */
 #undef VERSION
 
+/* Define to 1 if the X Window System is missing or not being used. */
+#undef X_DISPLAY_MISSING
+
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 
-/* Define to `unsigned' if <sys/types.h> does not define. */
+/* Define to `unsigned int' if <sys/types.h> does not define. */
 #undef size_t

@@ -5,14 +5,12 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-# This is the debhelper compatibility version to use.
-export DH_COMPAT=4
+include /usr/share/dpatch/dpatch.make
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
-
 
 CFLAGS = -Wall -g
 
@@ -21,45 +19,43 @@ ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 else
 	CFLAGS += -O2
 endif
-ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
-	INSTALL_PROGRAM += -s
-endif
 
-config.status: configure
+config.status: configure patch-stamp
 	dh_testdir
-	# Add here commands to configure the package.
-	./configure --host=$(DEB_HOST_GNU_TYPE) \
-	            --build=$(DEB_BUILD_GNU_TYPE) \
-				--prefix=$(CURDIR)/debian/electricsheep/usr \
+	@echo "Configuring...\n"
+	touch configure.in && \
+		touch aclocal.m4 && \
+		touch configure
+	./configure $(confflags) \
+	            --prefix=/usr \
+				--datadir=\$${prefix}/share \
 				--mandir=\$${prefix}/share/man \
-				--infodir=\$${prefix}/share/info
+				--infodir=\$${prefix}/share/info \
+	            --host=$(DEB_HOST_GNU_TYPE) \
+	            --build=$(DEB_BUILD_GNU_TYPE)
 
 build: build-stamp
 
 build-stamp:  config.status
 	dh_testdir
-
-	# Add here commands to compile the package.
 	$(MAKE) CFLAGS="$(CFLAGS)"
-	#/usr/bin/docbook-to-man debian/electricsheep.sgml > electricsheep.1
-
 	touch build-stamp
 
-clean:
+clean: unpatch
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp 
-
-	# Add here commands to clean up after the build process.
-	-$(MAKE) distclean
-ifneq "$(wildcard /usr/share/misc/config.sub)" ""
-	cp -f /usr/share/misc/config.sub config.sub
-endif
-ifneq "$(wildcard /usr/share/misc/config.guess)" ""
-	cp -f /usr/share/misc/config.guess config.guess
-endif
-
-
+	rm -f debian/*.substvars
+	-test -r /usr/share/misc/config.sub && \
+		cp -f /usr/share/misc/config.sub config.sub
+	-test -r /usr/share/misc/config.guess && \
+		cp -f /usr/share/misc/config.guess config.guess
+	-test -f config.status && \
+	$(MAKE) distclean
+	rm -f configure-stamp
+	rm -f config.status
+	rm -f config.log
+	rm -rf src/.deps
 	dh_clean
 
 install: build
@@ -67,17 +63,19 @@ install: build
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
-
-	# Add here commands to install the package into debian/electricsheep.
-	$(MAKE) install PREFIX=$(CURDIR)/debian/electricsheep/usr
-	mkdir -p $(CURDIR)/debian/electricsheep/usr/share/electricsheep
-	mv -f $(CURDIR)/debian/electricsheep/usr/share/*tif $(CURDIR)/debian/electricsheep/usr/share/electricsheep/
-	cp $(CURDIR)/debian/electricsheep.desktop $(CURDIR)/debian/electricsheep/usr/share/control-center/Desktop/
+	# Install the upstream stuff
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/electricsheep
+	# Now install the screensaver conffile, for xscreensaver...
+	mkdir -p $(CURDIR)/debian/electricsheep/usr/share/control-center/Desktop
+	cp $(CURDIR)/debian/default-files/electricsheep.desktop $(CURDIR)/debian/electricsheep/usr/share/control-center/Desktop/
+	# ... and for kscreensaver
+	mkdir -p $(CURDIR)/debian/electricsheep/usr/share/applnk/System/ScreenSavers
+	cp $(CURDIR)/debian/default-files/electricsheep.desktop $(CURDIR)/debian/electricsheep/usr/share/applnk/System/ScreenSavers
+	# cleanup
 	rm -rf $(CURDIR)/debian/electricsheep/usr/include
 
 # Build architecture-independent files here.
 binary-indep: build install
-# We have nothing to do by default.
 
 # Build architecture-dependent files here.
 binary-arch: build install
@@ -87,22 +85,13 @@ binary-arch: build install
 	dh_installdocs
 	dh_installexamples
 	dh_installmenu
-#	dh_installlogrotate
-#	dh_installemacsen
-#	dh_installpam
-#	dh_installmime
-#	dh_installinit
-#	dh_installcron
-	dh_installman
-#	dh_installinfo
+	dh_installman debian/manpages/*.1
 	dh_installchangelogs 
 	dh_link
 	dh_strip
 	dh_compress
 	dh_fixperms
-#	dh_makeshlibs
 	dh_installdeb
-#	dh_perl
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums

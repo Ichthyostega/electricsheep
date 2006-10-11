@@ -1,16 +1,24 @@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 
-SUBDIRS = flame mpeg2dec
+SUBDIRS = flam3 mpeg2dec
 
-bin_PROGRAMS = electricsheep
+AM_CFLAGS = -DPACKAGE_DATA_DIR=\"$(pkgdatadir)\"
 
-data_DATA = electricsheep-splash-0.tif electricsheep-splash-1.tif electricsheep-smile.tif electricsheep-frown.tif
+bin_PROGRAMS = electricsheep electricsheep-voter
 
-electricsheep_SOURCES = electricsheep.c
+electricsheep_voter_CFLAGS = @X_CFLAGS@ $(AM_CFLAGS)
+electricsheep_voter_LDADD = @X_LIBS@ -lX11 @X_EXTRA_LIBS@
+
+pkgdata_DATA = electricsheep-smile.png electricsheep-frown.png
+
+electricsheep_SOURCES = electricsheep.c getdate.c
 man1_MANS = electricsheep.man
-EXTRA_DIST = $(man1_MANS) $(data_DATA) electricsheep.xml electricsheep.spec timers.c.patch mkinstalldirs
+EXTRA_DIST = $(man1_MANS) $(pkgdata_DATA) electricsheep.man.in \
+	electricsheep.xml.in electricsheep.spec.in mkinstalldirs getdate.h
 
-# first one is for redhat 8, then for redhat 9
+SCREENSAVER_DATADIR = $(DESTDIR)/usr/share/xscreensaver/config
+
 install-data-local:
-	${INSTALL} electricsheep.xml /usr/X11R6/lib/xscreensaver/config
-	${INSTALL} electricsheep.xml /usr/share/control-center/screensavers/electricsheep.xml
+	$(INSTALL) -m 0755 -d $(SCREENSAVER_DATADIR)
+	$(INSTALL) -m 0644    electricsheep.xml $(SCREENSAVER_DATADIR)
+	$(INSTALL) -m 0755 -d $(DESTDIR)/$(pkgdatadir)

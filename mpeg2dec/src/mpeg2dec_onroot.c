@@ -523,7 +523,6 @@ int main (int argc, char ** argv)
 
     if (!quiet) fprintf (stderr, PACKAGE"-"VERSION
 	     " - by Michel Lespinasse <walken@zoy.org> and Aaron Holtzman\n");
-
     handle_args (argc, argv);
 
     accel = disable_accel ? 0 : (mm_accel () | MM_ACCEL_MLIB);

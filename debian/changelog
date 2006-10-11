@@ -1,3 +1,130 @@
+electricsheep (2.6.8-5) unstable; urgency=low
+
+  * Removed the debian revision from the version string so sheeps can be
+    downloaded from the server.
+    (closes: #391990)
+
+ -- Alexis Sukrieh <sukria@debian.org>  Wed, 11 Oct 2006 07:54:36 +0200
+
+electricsheep (2.6.8-4) unstable; urgency=high
+
+  [ Jérémy Bobbio ]
+
+  * debian/patches/04_Composite.dpatch
+    + tells mpeg2dec_onroot to skip ARGB visuals
+    when trying to find the best visual. Fix an issue when running inside a
+    Composite-enabled X environment.
+    (closes: #390902)
+
+  [ Alexis Sukrieh ]
+
+  * urgency set to high, for closing a RC bug in testing (BSP).
+
+ -- Alexis Sukrieh <sukria@debian.org>  Sat,  7 Oct 2006 16:49:00 +0200
+
+electricsheep (2.6.8-3) unstable; urgency=low
+
+  * mpeg2dec/libmpeg2/idct_altivec.c
+    Applied patch from p2@mind.be for fixing the FTBFS issue on ppc
+    architectures.
+    (closes: #386673)
+
+ -- Alexis Sukrieh <sukria@debian.org>  Mon, 18 Sep 2006 08:50:14 +0200
+
+electricsheep (2.6.8-2) unstable; urgency=low
+
+  [ The "Hey babe, I'm a Debian Developer!" upload, part #1 ] 
+  
+  * Changed Maintainer field in debian/control to `sukria@debian.org'. 
+
+ -- Alexis Sukrieh <sukria@debian.org>  Sat,  9 Sep 2006 10:27:36 +0200
+
+electricsheep (2.6.8-1) unstable; urgency=low
+
+  * New upstream release.
+    (closes: 365652)
+
+ -- Alexis Sukrieh <sukria@sukria.net>  Sat,  5 Aug 2006 10:43:00 +0200
+
+electricsheep (2.6.6-1) unstable; urgency=low
+
+  * New upstream release.
+  * Fixed some packaging issues reported by Philipp Kern.
+  * Updated autotools scripts:
+    + Added AM_MAINTAINER_MODE to configure.in
+    + Customized Makefile.am so we can drop debian/patches/01_Makefile.dpatch
+  * debian/rules now uses DESTDIR instead of PREFIX, cleaner (thanks to
+    Philipp Kern).
+  * Policy revision: 3.7.2
+
+ -- Alexis Sukrieh <sukria@sukria.net>  Tue,  2 May 2006 00:28:02 +0200
+
+electricsheep (2.6.4-2) unstable; urgency=low
+
+  * Added missing build-dependencies: libx11-dev, libxext-dev, x-dev, libxt-dev 
+    (closes: #344653)
+
+ -- Alexis Sukrieh <sukria@sukria.net>  Sun, 25 Dec 2005 10:26:31 +0100
+
+electricsheep (2.6.4-1) unstable; urgency=low
+
+  * New upstream release.
+    + possible to preview electricsheep in xscreensaver while running other
+    instances (closes: #273984).
+    + possible to run electricsheep in standalone mode, with a specific
+    datadir (closes: #341004).
+  * Removed debian/electricsheep.postinst, not needed anymore with the new
+    upstream code tree.
+
+ -- Alexis Sukrieh <sukria@sukria.net>  Wed, 21 Dec 2005 15:49:57 +0100
+
+electricsheep (2.6.3+cvs20051206-1) unstable; urgency=low
+
+  * New upstream release (CVS snapshot from 2005/12/06)
+    + Fixes several buffer overflows
+  * New patch for canceling the use of xsetbg for avoiding bug #325689.
+  * New configure.in for using AM_MAINTAINER_MODE.
+
+ -- Alexis Sukrieh <sukria@sukria.net>  Tue,  6 Dec 2005 10:42:23 +0100
+
+electricsheep (2.6.3-2) unstable; urgency=low
+
+  * Removed the dependency to xlibs-dev, added libxv-dev instead which is the
+    only one needed here.
+  * Remove stubs maintainer scripts (they came from the old maintenance and I
+    forgot to remove them, let's do a bit of cleaning).
+    - debian/prerem
+    - debian/postrm
+  * Remove debian/REJECT (was containing the licence).
+  * Remove the overkilling dependency xlibs-dev, the other build-dependencies
+    are enough.
+  * Changed the autotools scripts, using AM_MAINTAINER_MODE, added a
+    bootstrap.
+  * Removed duplicate debian/electricsheep.desktop file, is provided in
+    debian/default-files.
+
+ -- Alexis Sukrieh <sukria@sukria.net>  Tue, 29 Nov 2005 21:00:56 +0100
+
+electricsheep (2.6.3-1) unstable; urgency=low
+
+  * New upstream release.
+    (closes: #318003)
+  * New patch for Makefile.in.
+  * Added a .desktop file for KDE (Thanks to Gonéri Le Bouder).
+    (closes: #315420)
+
+ -- Alexis Sukrieh <sukria@sukria.net>  Mon, 25 Jul 2005 14:12:57 +0200
+
+electricsheep (2.6.2-1) unstable; urgency=low
+
+  * New upstream release: 2.6.2.
+    (closes: #309852)
+  * Added myself as maintainer (Sander Smeenk offered it to me).
+  * Added dpatch for handling changes applied on upstream sources.
+  * Added all missing manpages.
+
+ -- Alexis Sukrieh <sukria@sukria.net>  Fri, 17 Jun 2005 18:28:17 +0200
+
 electricsheep (2.5-2) unstable; urgency=low
 
   + Fixed builddepends on libpng (Closes: #245816)

@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = no-dependencies
 
-CFLAGS = @CFLAGS@ @LIBMPEG2_CFLAGS@
+AM_CFLAGS = @LIBMPEG2_CFLAGS@
 
 noinst_LIBRARIES = libmpeg2.a
 libmpeg2_a_SOURCES = decode.c header.c stats.c cpu_state.c slice.c \
