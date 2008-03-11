@@ -1,3 +1,38 @@
+electricsheep (2.6.8-9) unstable; urgency=low
+
+  [ Yves-Alexis Perez ]
+  * link electricsheep to the correct location. (closes: #467441)
+
+  [ Alexis Sukrieh ]
+  * Standard Revision: 3.7.3
+  * Changed Apps to Applications in debian/menu (fixed a lintian warning).
+
+ -- Alexis Sukrieh <sukria@debian.org>  Tue, 11 Mar 2008 17:30:22 +0100
+
+electricsheep (2.6.8-8) unstable; urgency=low
+
+  * Added a debconf-2.0 alternate to dependencies (closes: #448477)
+
+ -- Alexis Sukrieh <sukria@debian.org>  Mon, 19 Nov 2007 16:34:53 +0100
+
+electricsheep (2.6.8-7) unstable; urgency=low
+
+  * Summer cleanup of the package, install .desktop files in the appropriate
+    places.
+    (closes: #432782)
+  * Autotools cleanup.
+
+ -- Alexis Sukrieh <sukria@debian.org>  Fri, 13 Jul 2007 15:50:13 +0200
+
+electricsheep (2.6.8-6) unstable; urgency=low
+
+  * Compliant with gnome-screensaver
+    + provides a valid electricsheep.desktop file in
+    `/usr/share/gnome-screensaver/themes'.
+    (closes: #425297)
+
+ -- Alexis Sukrieh <sukria@debian.org>  Wed, 30 May 2007 13:37:45 +0200
+
 electricsheep (2.6.8-5) unstable; urgency=low
 
   * Removed the debian revision from the version string so sheeps can be
