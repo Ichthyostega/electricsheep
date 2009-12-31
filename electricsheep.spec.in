@@ -7,7 +7,7 @@ Group: Graphics
 Source: http://electricsheep.org/electricsheep-@VERSION@.tar.gz
 Url: http://electricsheep.org
 Packager: Scott Draves <rpm@electricsheep.org>
-Requires: xloadimage, xscreensaver, expat, curl
+Requires: xscreensaver, expat, curl
 %description
 
 Electric Sheep is a screen-saver that realizes the collective dream of

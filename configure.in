@@ -1,13 +1,14 @@
-dnl $Id: configure.in,v 1.43 2006/07/25 21:00:04 spotspot Exp $
+dnl $Id: configure.in,v 1.55 2008/05/16 20:16:41 spotspot Exp $
 dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT
 AC_CONFIG_SRCDIR([electricsheep.c])
 AC_CONFIG_HEADERS([config.h])
-AM_INIT_AUTOMAKE(electricsheep,"2.6.8")
+AM_INIT_AUTOMAKE(electricsheep,"2.7b12")
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
+AC_PROG_MKDIR_P
 AC_HEADER_STDC
 AC_PATH_XTRA
 AC_C_CONST
@@ -18,12 +19,16 @@ AC_CHECK_LIB([expat],[XML_ParserCreate],,[AC_MSG_ERROR([The expat xml library is
 AC_FUNC_SETPGRP
 AC_CHECK_FUNCS(setproctitle)
 
-GNOME_DATADIR=`pkg-config --variable=prefix gtk+-2.0`
-GNOME_DATADIR="$GNOME_DATADIR/share"
+X11_PREFIX=`pkg-config --print-errors --variable=prefix x11`
+X11_SHARE="$X11_PREFIX/share"
 
-AC_SUBST(GNOME_DATADIR)
-AC_CONFIG_SUBDIRS( mpeg2dec flam3 )
+PKG_CHECK_MODULES(libglade, libglade-2.0 >= 2.5.0 gtk+-2.0 >= 2.7.0)
+AC_SUBST(libglade_CFLAGS)
+AC_SUBST(libglade_LIBS)
+
+AC_SUBST(X11_SHARE)
 AC_CONFIG_FILES([Makefile ])
+AC_CONFIG_FILES([electricsheep.desktop ])
 AC_CONFIG_FILES([electricsheep.xml ])
 AC_CONFIG_FILES([electricsheep.spec ])
 AC_CONFIG_FILES([electricsheep.man ])
