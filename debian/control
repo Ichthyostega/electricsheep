@@ -1,13 +1,14 @@
 Source: electricsheep
 Section: x11
 Priority: optional
-Maintainer: Alexis Sukrieh <sukria@debian.org>
-Build-Depends: debhelper (>= 4.0.0), libjpeg62-dev, libexpat1-dev, libpng12-dev, dpatch, libxv-dev, libx11-dev, libxext-dev, x-dev, libxt-dev
-Standards-Version: 3.7.3
+Maintainer: Roberto C. Sanchez <roberto@connexer.com>
+Build-Depends: debhelper (>= 5), quilt, autotools-dev, autoconf, pkg-config, x11proto-core-dev, libglade2-dev (>= 2.5.0), libgtk2.0-dev (>= 2.7.0), libavformat-dev
+Standards-Version: 3.8.3
+Homepage: http://www.electricsheep.org
 
 Package: electricsheep
 Architecture: any
-Depends: ${shlibs:Depends}, debconf | debconf-2.0, curl, xloadimage, libjpeg-progs
+Depends: mplayer, flam3 (>= 2.7.19), debconf | debconf-2.0, curl, xloadimage, libjpeg-progs, ${shlibs:Depends}, ${misc:Depends}
 Description: screensaver showing collective dream of sleeping computers
  Electric sheep is the collective dream of sleeping computers
  from all over the internet. Less poetically, it is an Internet server and

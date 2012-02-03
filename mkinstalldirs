@@ -4,7 +4,7 @@
 # Created: 1993-05-16
 # Public domain
 
-# $Id: mkinstalldirs,v 1.1.1.1 2002/12/12 09:32:56 spotspot Exp $
+# $Id: mkinstalldirs,v 1.1.1.1 2002-12-12 09:32:56 spotspot Exp $
 
 errstatus=0
 

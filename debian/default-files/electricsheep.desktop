@@ -1,5 +1,4 @@
 [Desktop Entry]
-Encoding=UTF-8
 Exec=electricsheep
 Icon=kscreensaver
 Type=Application
@@ -60,7 +59,7 @@ Name[zu]=Veza kwi-window ecacisiwe
 NoDisplay=true
  
 [Desktop Action Root]
-Exec=electricsheep --root 1 --zoom 1
+Exec=electricsheep --root 1
 Name=Display in root window
 Name[af]=Vertoon in root venster
 Name[bg]=Стартиране в главния прозорец

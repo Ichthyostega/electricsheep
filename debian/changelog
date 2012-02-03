@@ -1,3 +1,49 @@
+electricsheep (2.7~b12+svn20091224-1.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Patch from Ubuntu by Fabrice Coutadeur to fix FTBFS. (Closes: #621985)
+    * fix_ftbfs_libav_0.7.patch: fix deprecated variable to fix a FTBFS with
+      libav 0.7
+    * fix_link_as-needed.patch: fix Makefile.am and Makefile.in to avoid a FTBFS
+      when as-needed is used with undefined gtk functions (LP: #770773) by moving
+      libs from LDFLAGS to LDADD
+
+ -- Konstantinos Margaritis <markos@debian.org>  Fri, 03 Feb 2012 11:50:38 +0200
+
+electricsheep (2.7~b12+svn20091224-1) unstable; urgency=low
+
+  * New upstream snapshot (Closes: #562230)
+
+ -- Roberto C. Sanchez <roberto@connexer.com>  Thu, 31 Dec 2009 14:59:07 -0500
+
+electricsheep (2.7~b12+svn20090708-2) unstable; urgency=low
+
+  * Remove contrib script (esheep-mplayer.sh) from previous Debian
+    package. (Closes: #546297)
+  * debian/control:
+    + Add Homepage field
+    + Add dependency on mplayer
+  * electricsheep.desktop.gnome: Remove obsolete --zoom option
+  * electricsheep.desktop: Remove obsolete --zoom option
+
+ -- Roberto C. Sanchez <roberto@connexer.com>  Wed, 30 Dec 2009 21:41:53 -0500
+
+electricsheep (2.7~b12+svn20090708-1) unstable; urgency=low
+
+  * New upstream release. (Closes: #533652)
+  * New maintainer.
+  * Move to dehelper compatibility level 5.
+  * Update Build-Depends to remove obsolete package. (Closes: #515464)
+  * Remove bashism from debian/rules. (Closes: #535377)
+  * Remove unneeded dpatch patches.
+  * Bump Standards-Version to 3.8.3 (no changes).
+  * Clean up *.desktop files.
+  * Add empty watch file explaining upstream's "release" policy.
+  * Update debian/copyright to reflect new year and new maintainer.
+  * Clean up upstream's man page (properly escape hyphens).
+
+ -- Roberto C. Sanchez <roberto@connexer.com>  Mon, 24 Aug 2009 16:29:53 -0400
+
 electricsheep (2.6.8-9) unstable; urgency=low
 
   [ Yves-Alexis Perez ]

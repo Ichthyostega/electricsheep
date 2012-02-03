@@ -18,7 +18,7 @@
 */
 
 static char *electricsheep_voter_c_id =
-"@(#) $Id: electricsheep-voter.c,v 1.8 2005/07/11 07:22:17 spotspot Exp $";
+"@(#) $Id: electricsheep-voter.c,v 1.8 2005-07-11 07:22:17 spotspot Exp $";
 
 /*
  * When an arrow key is pressed transmit a vote to the server.

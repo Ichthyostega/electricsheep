@@ -1,14 +1,14 @@
 electric sheep - a collaborative screen saver
-Scott Draves <readme@electricsheep.org>
-http://electricsheep.org
+by Scott Draves and Spotworks LLC
+http://electricsheep.org and http://spotworks.com
 see the file COPYING for the license covering this software.
 
 
-Electric Sheep is an xscreensaver module that displays mpeg video of
-an animated fractal flame.  In the background it contributes render
-cycles to the next animation.  Periodically it uploades completed
-frames to the server, where they are compressed for distribution to
-all clients.
+Electric Sheep uses evolution and mathematics to create animated
+abstract art.  Everyone running the software participates in creating
+what everyone sees via distributed computing and P2P networking.
+Primarily, it works as a screensaver to harness idle compute cycles
+into a cyborg mind.
 
 This program is recommended only if you have a high bandwidth
 connection to the internet such as DSL or cable modem.
@@ -19,34 +19,98 @@ As usual, to configure, build, and install:
 	make
 	sudo make install
 
-This package depends on curl, xloadimage, and expat.  If you don't
-have them already you can find them with http://rpmfind.net.
+It should install itself as a module in gnome-screensaver.  It also
+works with xscreensaver.
 
-After that you can test it by just running it from the commandline
-without arguments, ie "electricsheep".  After several minutes of
-downloading a window will appear and the first sheep will be drawn.
+Configure it by running "electricsheep-preferences" from the command
+line.  After that you can test it by just running it from the
+commandline without arguments, ie "electricsheep".  After several
+minutes of downloading a window will appear and the first sheep will
+be drawn.
 
-An xscreensaver configuration file is installed so that
-xscreensaver-demo should list electricsheep as an option with a
-graphical configuration panel.  xscreensaver is documented at
-http://www.jwz.org/xscreensaver/man.html
-
-If you install the hacked version of xscreensaver, then you can vote
-for the sheep with the up and down arrow keys.  These keys will vote
-for the sheep currently displayed rather than exit the saver.
+For KDE, move the file electricsheep.desktop.kde to
+/usr/share/kde4/services/ScreenSavers/electricsheep.desktop
 
 ----
 
-todo:
+changelog:
 
-if LIBVO_XV not defined should disable overlays.
+v2.7b12 print standard deviation of play counts if debugging.  add
+	electricsheep.desktop.kde from javajazz.  add play_evenly
+	preference to reduce playing of most played sheep.  fix bug of
+	rescanning the local cache too often.  add "-cache 8192"
+	options to mplayer because some newer versions require it when
+	reading stdin (suggested by Alien Bob aka Eric).  Fix memory
+	leaks and remove hacked version of ffmpeg (thanks David
+	Leverton).  Use query.php server redirection.  Clean up
+	warnings.  Store and transmit md5 hash of password instead of
+	cleartext.
 
-video_out_x11.c:146 assumes cache dir is .sheep
+v2.7b11 11/2008 Keep track of how many times each sheep is played, and
+	delete sheep that are played most often (instead of using
+	simulation to estimate).  Each flam3-animate process should
+	use only one thread.  Change copyright from Draves to
+	Spotworks LLC.  Fix to work with xscreensaver: prevent mplayer
+	from disabling xscreensaver. Print bad text if there is a
+	parse error.
 
-----
+v2.7b10 09/2008 delay fork of mplayer by 300ms to make startup more
+	reliable (why?!).  repeat 2x instead of 3x before breaking a
+	simple infinite loop.  download immediately if there are 2 or
+	fewer sheep in the cache.  to select sheep for deletion,
+	randomly half the time delete the oldest sheep instead of the
+	most-played according to simulation.
 
-changelog (note that the flame subdirectory has its own README &
-changelog there):
+v2.7b9 08/2008 change default nickname to empty string to protect user
+       privacy, instead of broadcasting USER envar.  add a button to
+       the preferences dialog that tests the current network settings
+       (including if the user/password account is valid). use 20th
+       percentile instead of median for deletion limit, ie protect
+       fewer sheep.  remove cvs version strings.  follow http
+       redirections vi -L option to curl.  enable basic authentication
+       (the user/password refers to the drupal on the sheep server).
+       put the client version into the URL for the help page.
+
+v2.7b8 07/17/2008 fix big bug picking sheep to delete by switching
+       from ctime to mtime.  add new files to extra_dist.
+
+v2.7b7 07/2008 handle multiple monitors better by using xwininfo
+       instead of xdpyinfo to read the screen resolution.  stagger
+       render thread start times.
+
+v2.7b6 06/2008 add version number and button to open web browser on
+       homepage to the preferences dialog.
+
+v2.7b5 06/2008 delete the most played sheep, instead of the oldest
+       sheep.  when deleting, don't leave dangling sheep.  removed
+       flam3, flame, mpeg2dec dependencies. include patched ffmpeg
+       code in source package.  first packaged 2.7 version.
+
+v2.7b3 11/2007 fix hang on sheep deletion.
+
+v2.7b2 11/2007 use marker files to update cache sooner.  global
+       generation no longer part of state.  configure
+       gnome-screensaver during install using gconftool-2.  start with
+       least recently accessed sheep instead of a random one.  add
+       ffmpeg.patch to plug memory leak.  ditch the .sheep/id file.
+       move to .electricsheep/* and preferences.xml and
+       electricsheep-preferences (a glade UI to the xml prefs).  play
+       electricshep-wait.avi until first sheep arrives.  settle on
+       mplayer.  remove zoom option since mplayer always does
+       it. note: password is not secure.  remove history from ui.
+
+v2.7b1 10/2007 new multi monitor patch from John Gibson (1640631 on
+       sf.net by John Gibson).  fix video_out_x11.c:146 assumes cache
+       dir is .sheep.  get tryagain parms from server.  exit on
+       generation change to prevent mixing incompatible mpeg formats.
+       on file read error, rescan cache directory.  allow unsetting
+       password.  install panel in location where xscreensaver 5.0 can
+       find it, support --password and authenticated server, split
+       frame into time and job, move up to flam3 v2.7. upgrade to
+       mpeg4 wrapped in avi by using ffmpeg and mplayer.  ditch
+       mpeg2dec_onroot.  unbundle flam3.  pick next sheep based on
+       least recently accessed instead of searching the history.
+       install binary where gnome can find it.
 
 v2.6.8 7/2006 use new libpng api, handle libpng errors properly (from
 	nix at esperi.org.uk).  name the window.  update

@@ -5,12 +5,12 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+include /usr/share/quilt/quilt.make
+
 # The GNOME screensaver path for screensavers .desktop files
 GNOME_SS_PATH=/usr/share/applications/screensavers
 # The path where xscreensaver looks for an .xml file
 XSS_CONF_PATH=/usr/share/xscreensaver/config
-
-include /usr/share/dpatch/dpatch.make
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -19,18 +19,20 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 CFLAGS = -Wall -g
 
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+#ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
-else
-	CFLAGS += -O2
-endif
+#else
+#	CFLAGS += -O2
+#endif
 
-config.status: configure patch-stamp
+config.status: configure $(QUILT_STAMPFN)
 	dh_testdir
-	@echo "Configuring...\n"
-	touch configure.in && \
-		touch aclocal.m4 && \
-		touch configure
+ifneq "$(wildcard /usr/share/misc/config.sub)" ""
+	cp -f /usr/share/misc/config.sub config.sub
+endif
+ifneq "$(wildcard /usr/share/misc/config.guess)" ""
+	cp -f /usr/share/misc/config.guess config.guess
+endif
 	./configure $(confflags) \
 	            --prefix=/usr \
 				--datadir=\$${prefix}/share \
@@ -41,27 +43,21 @@ config.status: configure patch-stamp
 
 build: build-stamp
 
-build-stamp:  config.status
+build-stamp: config.status
 	dh_testdir
 	$(MAKE) CFLAGS="$(CFLAGS)"
 	touch build-stamp
 
-clean: unpatch
+clean: clean-patched unpatch
+clean-patched: $(QUILT_STAMPFN)
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp 
 	rm -f debian/*.substvars
-	-test -r /usr/share/misc/config.sub && \
-		cp -f /usr/share/misc/config.sub config.sub
-	-test -r /usr/share/misc/config.guess && \
-		cp -f /usr/share/misc/config.guess config.guess
-	-test -f config.status && \
-	$(MAKE) distclean
-	rm -f configure-stamp
+	[ ! -f Makefile ] || $(MAKE) distclean
+	rm -f config.sub config.guess
 	rm -f config.status
 	rm -f config.log
-	rm -f mpeg2dec/config.log
-	rm -rf src/.deps
 	dh_clean
 
 install: build 
@@ -78,6 +74,9 @@ install: build
 	mkdir -p $(CURDIR)/debian/electricsheep$(GNOME_SS_PATH)
 	cp $(CURDIR)/debian/default-files/electricsheep.desktop.gnome \
 		$(CURDIR)/debian/electricsheep$(GNOME_SS_PATH)/electricsheep.desktop
+	# ... and for kscreensaver
+	mkdir -p $(CURDIR)/debian/electricsheep/usr/share/applnk/System/ScreenSavers
+	cp $(CURDIR)/debian/default-files/electricsheep.desktop $(CURDIR)/debian/electricsheep/usr/share/applnk/System/ScreenSavers
 	# cleanup
 	rm -rf $(CURDIR)/debian/electricsheep/usr/include
 
@@ -92,7 +91,8 @@ binary-arch: build install
 	dh_installdocs
 	dh_installexamples
 	dh_installmenu
-	dh_installman debian/manpages/*.1
+	dh_installman
+	dh_gconf --priority=20
 	dh_installchangelogs 
 	dh_link
 	dh_strip
