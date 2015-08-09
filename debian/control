@@ -4,6 +4,8 @@ Priority: optional
 Maintainer: Ichthyostega <deb@ichthyostega.de>
 Standards-Version: 3.9.6
 Build-Depends: debhelper (>= 9),
+	cdbs,
+	dh-autoreconf,
 	autotools-dev,
 	autoconf,
 	automake,
