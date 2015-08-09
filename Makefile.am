@@ -1,39 +1,100 @@
-AUTOMAKE_OPTIONS = foreign no-dependencies
+## Process this file with automake to produce Makefile.in
 
-AM_CFLAGS = -DPACKAGE_DATA_DIR=\"$(pkgdatadir)\"
+AUTOMAKE_OPTIONS = 1.7
 
-electricsheep_LDADD = -lavformat -lavcodec -lavutil -lm -lz
+MAINTAINERCLEANFILES = Makefile.in aclocal.m4 configure config.h.in \
+                       stamp-h.in config.log config.cache config.status
 
-bin_PROGRAMS = electricsheep electricsheep-preferences
+SUBDIRS = Client MSVC/SettingsGUI
 
-pkgdata_DATA = electricsheep-wait.avi electricsheep-preferences.glade
+docdir = $(prefix)/share/doc/$(PACKAGE)-$(VERSION)
+sharedir = $(prefix)/share
 
-electricsheep_preferences_CFLAGS = @libglade_CFLAGS@ -DPACKAGE_DATA_DIR=\"$(pkgdatadir)\"
-electricsheep_preferences_LDFLAGS = @libglade_LIBS@ -export-dynamic
-electricsheep_preferences_SOURCES = electricsheep-preferences.c utils.c md5.c
+gnome_screensaver_dir = /usr/lib/gnome-screensaver
+
+# add documentation files here
+doc_DATA = AUTHORS README NEWS ChangeLog Runtime/Instructions.rtf Runtime/License.rtf
+
+# extra files to be included in distributions
+EXTRA_DIST = \
+	configure \
+	COPYING \
+	INSTALL \
+	electricsheep-saver \
+	electricsheep-saver-gnome \
+	Runtime/Scripts/*.lua \
+	Runtime/Scripts/Dictionary/*.lua \
+	Runtime/Scripts/logging/*.lua \
+	menu-entries/ElectricSheep.desktop \
+	menu-entries/electricsheep-saver.desktop \
+	menu-entries/electricsheep.xpm \
+	Runtime/electricsheep-attr.png \
+	Runtime/electricsheep-frown.png \
+	Runtime/electricsheep-smile.png \
+	Runtime/TrebuchetMS-20.glf \
+	Runtime/TrebuchetMS-24.glf \
+	Runtime/sheep_logo.xpm \
+	Runtime/sheep_logo2.xpm \
+	wxWidgets-2.9.1 \
+	$(doc_DATA)
 
 
-electricsheep_SOURCES = electricsheep.c getdate.c utils.c md5.c
-man1_MANS = electricsheep.man
-EXTRA_DIST = $(man1_MANS) $(pkgdata_DATA) electricsheep.man.in md5.h \
-	electricsheep.xml.in electricsheep.spec.in mkinstalldirs getdate.h \
-	electricsheep-preferences.glade electricsheep.h electricsheep-saver \
-	16_electricsheep 
+dist-hook:
+	rm -rf `find $(distdir)/wxWidgets-2.9.1 -name svn`
 
-GNOME_SCREENSAVER_DATADIR = $(shell pkg-config --variable themesdir gnome-screensaver)
-GNOME_SCREENSAVER_PRIVEXEDIR = $(shell pkg-config --variable privlibexecdir gnome-screensaver)
+
+installdirs: 
+	mkinstalldirs
+	$(srcdir)/mkinstalldirs
+	mkdir -p $(DESTDIR)$(bindir)
+	mkdir -p $(DESTDIR)$(sharedir)/electricsheep/Scripts
+	mkdir -p $(DESTDIR)$(sharedir)/applications
+	mkdir -p $(DESTDIR)$(sharedir)/pixmaps
+	mkdir -p $(DESTDIR)$(sharedir)/electricsheep/icons
+	mkdir -p $(DESTDIR)$(gnome_screensaver_dir)
 
 install-data-local:
-	-$(INSTALL) electricsheep.desktop $(GNOME_SCREENSAVER_DATADIR)
-	-$(INSTALL) electricsheep-saver $(GNOME_SCREENSAVER_PRIVEXEDIR)
-	-$(INSTALL) -d $(pkgdatadir)
-	-$(INSTALL) 16_electricsheep /usr/share/gconf/defaults
-	-update-gconf-defaults
+	mkdir -p $(DESTDIR)$(bindir)
+	mkdir -p $(DESTDIR)$(sharedir)/electricsheep/Scripts
+	mkdir -p $(DESTDIR)$(sharedir)/applications
+	mkdir -p $(DESTDIR)$(sharedir)/pixmaps
+	mkdir -p $(DESTDIR)$(sharedir)/electricsheep/icons
+	mkdir -p $(DESTDIR)$(gnome_screensaver_dir)
+	cp -rf $(srcdir)/Runtime/Scripts $(DESTDIR)$(sharedir)/electricsheep
+	mkdir -p $(DESTDIR)$(sharedir)/applications/
+	cp -f $(srcdir)/menu-entries/ElectricSheep.desktop.kde $(DESTDIR)$(sharedir)/applications/ElectricSheep.desktop
+	mkdir -p $(DESTDIR)$(sharedir)/pixmaps/
+	cp -f $(srcdir)/menu-entries/electricsheep.xpm $(DESTDIR)$(sharedir)/pixmaps/
+	cp -f $(srcdir)/Runtime/electricsheep-attr.png $(DESTDIR)$(sharedir)/electricsheep/
+	cp -f $(srcdir)/Runtime/electricsheep-frown.png $(DESTDIR)$(sharedir)/electricsheep/
+	cp -f $(srcdir)/Runtime/electricsheep-smile.png $(DESTDIR)$(sharedir)/electricsheep/
+	cp -f $(srcdir)/Runtime/TrebuchetMS-20.glf $(DESTDIR)$(sharedir)/electricsheep/
+	cp -f $(srcdir)/Runtime/TrebuchetMS-24.glf $(DESTDIR)$(sharedir)/electricsheep/
+	mkdir -p $(DESTDIR)$(bindir)
+	cp -f $(srcdir)/electricsheep-saver $(DESTDIR)$(bindir) && chmod a+rx $(DESTDIR)$(bindir)/electricsheep-saver
+	mkdir -p $(DESTDIR)/usr/share/applications/screensavers/
+	cp -f $(srcdir)/menu-entries/electricsheep-saver.desktop $(DESTDIR)/usr/share/applications/screensavers/electricsheep.desktop
+	mkdir -p $(DESTDIR)$(gnome_screensaver_dir)
+	cp -f $(srcdir)/electricsheep-saver-gnome $(DESTDIR)$(gnome_screensaver_dir)/electricsheep-saver && chmod a+rx $(DESTDIR)$(gnome_screensaver_dir)/electricsheep-saver
 
+# install-exec stuff goes here
+install-exec-local:
+
+
+# uninstall stuff goes here
 uninstall-local:
-	-rm /usr/share/gconf/defaults/16_electricsheep
-	-rm -rf $(pkgdatadir)
-	-rm $(GNOME_SCREENSAVER_PRIVEXEDIR)/electricsheep-saver
-	-rm $(GNOME_SCREENSAVER_DATADIR)/electricsheep.desktop
-	-update-gconf-defaults
+	rm -rf $(DESTDIR)$(bindir)/electricsheep
+	rm -rf $(DESTDIR)$(bindir)/electricsheep-preferences
+	rm -rf $(DESTDIR)$(bindir)/electricsheep-saver
+	rm -rf $(DESTDIR)$(docdir)
+	rm -rf $(DESTDIR)$(sharedir)/electricsheep
+	rm -rf $(DESTDIR)$(sharedir)/pixmaps/electricsheep.xmp
+	rm -rf $(DESTDIR)$(sharedir)/applications/ElectricSheep.desktop
+	rm -rf $(DESTDIR)/usr/share/applications/screensavers/electricsheep.desktop
+	rm -rf $(DESTDIR)$(gnome_screensaver_dir)/electricsheep-saver
 
+# anything to be cleaned up for distro ?
+DISTCLEANFILES =
+
+# flags to pass to automake
+ACLOCAL_AMFLAGS = -I m4
