@@ -1,3 +1,9 @@
+electricsheep (2.7~b33-svn20150718-2) lumera-jessie-tools; urgency=medium
+
+  * fix package definition to also work on Ubuntu
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 10 Aug 2015 01:32:23 +0200
+
 electricsheep (2.7~b33-svn20150718-1) lumiera-jessie-tools; urgency=low
 
   * New upstream snapshot from 2015-07-18
