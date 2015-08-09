@@ -1,0 +1,23 @@
+From: Ichthyostega <prg@ichthyostega.de>
+Date: Sun, 9 Aug 2015 17:31:56 +0200
+Subject: obsolete_pthread_check
+
+drop obsolete Autoconf macro to check for pthreads.
+This macro is not supported in currren Autotools.
+And seemingly we're using boost-threads anyway
+---
+ configure.ac | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index b9b9c91..e9a562c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -37,7 +37,6 @@ AC_SYS_LARGEFILE
+ 
+ AM_PROG_AS
+ 
+-ACX_PTHREAD(PTHREAD_OK=true,PTHREAD_OK=false)
+ 
+ IS_LINUX_GNU="false"
+ 
