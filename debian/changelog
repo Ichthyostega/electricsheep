@@ -1,3 +1,9 @@
+electricsheep (2.7~b33-svn20150718-2ppa1~trusty) trusty; urgency=low
+
+  * Rebuild for Ubuntu trusty (14.04 LTS)
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 10 Aug 2015 01:40:20 +0200
+
 electricsheep (2.7~b33-svn20150718-2) lumera-jessie-tools; urgency=medium
 
   * fix package definition to also work on Ubuntu
