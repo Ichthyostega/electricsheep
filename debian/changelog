@@ -1,3 +1,11 @@
+electricsheep (2.7~b33-svn20150718-1) lumiera-jessie-tools; urgency=low
+
+  * New upstream snapshot from 2015-07-18
+  * Start over with a 'all default automatic' debian package based on CDBS
+  * Build for use on Debian/Jessie
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Sun, 09 Aug 2015 16:56:33 +0200
+
 electricsheep (2.7~b12+svn20091224-1.1) unstable; urgency=low
 
   * Non-maintainer upload.
