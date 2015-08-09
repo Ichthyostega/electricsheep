@@ -30,3 +30,10 @@ Description: screensaver showing collective dream of sleeping computers
  In the background, it contributes render cycles to the next animation.
  Periodically, it uploads completed frames to the server, where they are
  compressed for distribution to all clients.
+ .
+ NOTE:  The videos downloaded and displayed by Electric Sheep are
+ Creative Commons licensed (a mixture of CC-BY and CC-BY-NC). Some jobs
+ rendered by the network may be for images or animations which are not
+ sheep at all, and will not appear in the screen-saver.  Some of these
+ are used for commercial purposes in order to support the developers
+ and servers that make the software.
