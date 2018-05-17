@@ -33,7 +33,7 @@
 #define REDIRECT_SERVER				"community.sheepserver.net"
 #define REDIRECT_SERVER_FULL		"https://community.sheepserver.net"
 
-#define	BETA_RELEASE
+//#define	BETA_RELEASE
 
 
 #endif // CLIENTVERSION_H_INCLUDED

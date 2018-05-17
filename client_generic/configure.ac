@@ -4,7 +4,7 @@ AC_PREREQ(2.57)
 ifdef([m4_pattern_allow],
       [m4_pattern_allow([^AC_.*])])
 
-AC_INIT(electricsheep,2.7b33-svn,http://code.google.com/p/electricsheep/issues/list)
+AC_INIT(electricsheep,3.0.2,http://code.google.com/p/electricsheep/issues/list)
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
