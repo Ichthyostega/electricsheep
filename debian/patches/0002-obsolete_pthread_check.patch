@@ -1,9 +1,9 @@
 From: Ichthyostega <prg@ichthyostega.de>
 Date: Sun, 9 Aug 2015 17:31:56 +0200
-Subject: obsolete_pthread_check
+Subject: Drop obsolete pthreads autoconf check
 
 drop obsolete Autoconf macro to check for pthreads.
-This macro is not supported in currren Autotools.
+This macro is not supported in currrent Autotools.
 And seemingly we're using boost-threads anyway
 ---
  configure.ac | 1 -

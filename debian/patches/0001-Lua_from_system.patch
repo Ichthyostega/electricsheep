@@ -1,6 +1,6 @@
 From: Ichthyostega <prg@ichthyostega.de>
 Date: Sun, 9 Aug 2015 16:09:04 +0200
-Subject: Lua_from_system
+Subject: Build against Lua from system
 
 build against Lua installed on the system,
 instead of Lua interpreter shipped with the package
