@@ -28,14 +28,14 @@ Build-Depends: debhelper (>= 9),
 	libboost-dev (>= 1.39),
 	libboost-filesystem-dev (>= 1.39),
 	libboost-thread-dev (>= 1.39),
-	flam3 (>= 3.0)
+	flam3 (>= 3.1.1~)
 Homepage: http://www.electricsheep.org
 
 Package: electricsheep
 Architecture: any
 Depends: , ${shlibs:Depends}, ${misc:Depends},
 	debconf | debconf-2.0,
-	flam3 (>= 3.0),
+	flam3 (>= 3.1.1~),
 	mplayer,
 	xloadimage,
 	libjpeg-progs,
