@@ -38,7 +38,7 @@ namespace ContentDecoder
 	CContentDecoder.
 
 */
-CContentDecoder::CContentDecoder( spCPlaylist _spPlaylist, bool _bStartByRandom, bool _bCalculateTransitions, const uint32 _queueLenght, PixelFormat _wantedFormat )
+CContentDecoder::CContentDecoder( spCPlaylist _spPlaylist, bool _bStartByRandom, bool _bCalculateTransitions, const uint32 _queueLenght, AVPixelFormat _wantedFormat )
 {
 	g_Log->Info( "CContentDecoder()" );
 	m_FadeCount = static_cast<uint32>(g_Settings()->Get("settings.player.fadecount", 30));
@@ -446,7 +446,7 @@ bool	CContentDecoder::NextSheepForPlaying( int32 _forceNext )
 	else
 		return false;
 		
-	if (m_bCalculateTransitions && m_SecondVideoInfo != NULL && !m_SecondVideoInfo->IsOpen() && m_MainVideoInfo->m_Last != m_SecondVideoInfo->m_SheepID && m_MainVideoInfo->m_SheepID != m_SecondVideoInfo->m_First && (m_MainVideoInfo->m_Generation / 10000) == (m_SecondVideoInfo->m_Generation / 10000))
+	if (m_bCalculateTransitions && m_SecondVideoInfo != NULL && !m_SecondVideoInfo->IsOpen() && m_MainVideoInfo->m_Last != m_SecondVideoInfo->m_SheepID && m_MainVideoInfo->m_SheepID != m_SecondVideoInfo->m_First && m_MainVideoInfo->m_Last != m_SecondVideoInfo->m_First && (m_MainVideoInfo->m_Generation / 10000) == (m_SecondVideoInfo->m_Generation / 10000))
 	{
 		Open( m_SecondVideoInfo );
 	}

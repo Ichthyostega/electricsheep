@@ -150,7 +150,7 @@ void	CManager::Login( const std::string &_userName, const std::string &_password
 	boost::mutex::scoped_lock locker( m_Lock );
 
 	std::stringstream pu;
-	pu << Encode( _userName ) << ":" << Encode( _password );
+	pu << _userName << ":" << _password;
 	m_UserPass = pu.str();
 }
 
@@ -172,7 +172,7 @@ bool	CCurlTransfer::InterruptiblePerform()
 	fd_set fd_read, fd_write, fd_except;
 	int max_fd;
 	long timeout;
-	struct timeval tval;
+	struct timeval tval, orig_tval;
 
 	_code = curl_multi_perform( m_pCurlM, &running_handles );
 	
@@ -183,6 +183,7 @@ bool	CCurlTransfer::InterruptiblePerform()
 		return true;
 
 	running_handles_last = running_handles;
+	_code = CURLM_CALL_MULTI_PERFORM;
 	
 	while( 1 )
 	{
@@ -209,6 +210,12 @@ bool	CCurlTransfer::InterruptiblePerform()
 		if ( !VerifyM( _code ) )
 			return false;
 			
+		if (-1 == max_fd)
+		{
+			_code = CURLM_CALL_MULTI_PERFORM;
+			continue;
+		}
+			
 		timeout = -1;
 		
 #ifdef CURL_MULTI_TIMEOUT
@@ -223,6 +230,8 @@ bool	CCurlTransfer::InterruptiblePerform()
 
 		tval.tv_sec = timeout / 1000;
 		tval.tv_usec = timeout % 1000 * 1000;
+        
+        orig_tval = tval;
 
 		int err;
 		
@@ -232,13 +241,16 @@ bool	CCurlTransfer::InterruptiblePerform()
 		while ( ( err = select( max_fd + 1, &fd_read, &fd_write, &fd_except, &tval ) ) < 0 )
 		{
 #ifndef WIN32
-			if ( err != EINTR )
+			if ( errno != EINTR )
 			{
 				return false;
 			}
 #endif
 			if (!g_NetworkManager->SingletonActive() || g_NetworkManager->IsAborted())
 				return false;
+            
+            //tval should be considered invalid after "select" returns
+            tval = orig_tval;
 		}
 
 		_code = CURLM_CALL_MULTI_PERFORM;
@@ -283,8 +295,12 @@ bool	CCurlTransfer::Perform( const std::string &_url )
 	
 	if( !Verify( curl_easy_setopt( m_pCurl, CURLOPT_FOLLOWLOCATION, 1 ) ) )	return false;
 	if( !Verify( curl_easy_setopt( m_pCurl, CURLOPT_MAXREDIRS, 5 ) ) )	return false;
+    
+    if( !Verify( curl_easy_setopt( m_pCurl, CURLOPT_SSL_VERIFYHOST, 0 ) ) )	return false;
+    if( !Verify( curl_easy_setopt( m_pCurl, CURLOPT_SSL_VERIFYPEER, 0 ) ) )	return false;
 
 	Status( "Active" );
+
 	//if( !Verify( curl_easy_perform( m_pCurl ) ) )
 	if ( !InterruptiblePerform() )
 	{
@@ -307,6 +323,9 @@ bool	CCurlTransfer::Perform( const std::string &_url )
 		{
 			switch ( m_HttpCode )
 			{
+				case 500:
+					Status("Internal Server Error\n");
+					break;
 				case 401:
 					Status( "Authentication failed\n" );
 					break;
