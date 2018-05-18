@@ -1,10 +1,22 @@
+electricsheep (3.0.2-git20180325-1~stretch) Lumiera-stretch-tools; urgency=low
+
+  * New upstream release 3.0.2 (2018-03-25)
+  * require newest flam3 release.
+  * update to build agaist libjpeg9
+  * bump Debian standards version
+  * update the installed desktop files
+  * fix some FFmpeg deprecation warnings
+  * build against lib versions from the Linux distro
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Thu, 17 May 2018 17:50:05 +0200
+
 electricsheep (2.7~b33-svn20150718-2ppa1~trusty) trusty; urgency=low
 
   * Rebuild for Ubuntu trusty (14.04 LTS)
 
  -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 10 Aug 2015 01:40:20 +0200
 
-electricsheep (2.7~b33-svn20150718-2) lumera-jessie-tools; urgency=medium
+electricsheep (2.7~b33-svn20150718-2) Lumera-jessie-tools; urgency=low
 
   * fix package definition to also work on Ubuntu
 
