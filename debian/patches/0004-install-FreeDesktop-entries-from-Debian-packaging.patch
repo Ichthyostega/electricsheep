@@ -1,0 +1,45 @@
+From: Ichthyostega <prg@ichthyostega.de>
+Date: Fri, 18 May 2018 17:27:10 +0200
+Subject: install FreeDesktop entries from Debian packaging
+
+...instead of the very old *.desktop files from upstream tree.
+Basically those files are OK, but meanwhile, FreeDesktop is a common standard,
+and uses almost the same format previously employed by KDE and Gnome
+---
+ Makefile.am | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index cb5ca22..ad79e66 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -25,8 +25,6 @@ EXTRA_DIST = \
+ 	Runtime/Scripts/*.lua \
+ 	Runtime/Scripts/Dictionary/*.lua \
+ 	Runtime/Scripts/logging/*.lua \
+-	menu-entries/ElectricSheep.desktop \
+-	menu-entries/electricsheep-saver.desktop \
+ 	menu-entries/electricsheep.xpm \
+ 	Runtime/electricsheep-attr.png \
+ 	Runtime/electricsheep-frown.png \
+@@ -61,8 +59,6 @@ install-data-local:
+ 	mkdir -p $(DESTDIR)$(sharedir)/electricsheep/icons
+ 	mkdir -p $(DESTDIR)$(gnome_screensaver_dir)
+ 	cp -rf $(srcdir)/Runtime/Scripts $(DESTDIR)$(sharedir)/electricsheep
+-	mkdir -p $(DESTDIR)$(sharedir)/applications/
+-	cp -f $(srcdir)/menu-entries/ElectricSheep.desktop.kde $(DESTDIR)$(sharedir)/applications/ElectricSheep.desktop
+ 	mkdir -p $(DESTDIR)$(sharedir)/pixmaps/
+ 	cp -f $(srcdir)/menu-entries/electricsheep.xpm $(DESTDIR)$(sharedir)/pixmaps/
+ 	cp -f $(srcdir)/Runtime/electricsheep-attr.png $(DESTDIR)$(sharedir)/electricsheep/
+@@ -72,8 +68,9 @@ install-data-local:
+ 	cp -f $(srcdir)/Runtime/TrebuchetMS-24.glf $(DESTDIR)$(sharedir)/electricsheep/
+ 	mkdir -p $(DESTDIR)$(bindir)
+ 	cp -f $(srcdir)/electricsheep-saver $(DESTDIR)$(bindir) && chmod a+rx $(DESTDIR)$(bindir)/electricsheep-saver
+-	mkdir -p $(DESTDIR)/usr/share/applications/screensavers/
+-	cp -f $(srcdir)/menu-entries/electricsheep-saver.desktop $(DESTDIR)/usr/share/applications/screensavers/electricsheep.desktop
++	mkdir -p $(DESTDIR)$(sharedir)/applications/screensavers/
++	cp -f $(srcdir)/debian/desktop-files/ElectricSheep.desktop  $(DESTDIR)$(sharedir)/applications/ElectricSheep.desktop
++	cp -f $(srcdir)/debian/desktop-files/screensaver-electricsheep.desktop $(DESTDIR)/usr/share/applications/screensavers/electricsheep.desktop
+ 	mkdir -p $(DESTDIR)$(gnome_screensaver_dir)
+ 	cp -f $(srcdir)/electricsheep-saver-gnome $(DESTDIR)$(gnome_screensaver_dir)/electricsheep-saver && chmod a+rx $(DESTDIR)$(gnome_screensaver_dir)/electricsheep-saver
+ 
