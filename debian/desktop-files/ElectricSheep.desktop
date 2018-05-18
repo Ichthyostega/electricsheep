@@ -2,7 +2,7 @@
 Version=1.2
 Exec=electricsheep
 TryExec=electricsheep
-Icon=kscreensaver
+Icon=electricsheep
 Type=Application
 Terminal=false
 Actions=InWindow;Root;Setup;
@@ -15,6 +15,7 @@ Comment=Electric Sheep is a distributed screen-saver that harnesses idle compute
 
 [Desktop Action Setup]
 Exec=electricsheep-preferences
+Icon=preferences-desktop-screensaver
 Name=Setup...
 Name[de]=Einrichten...
 

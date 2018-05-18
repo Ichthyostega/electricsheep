@@ -7,5 +7,6 @@ Exec=electricsheep-saver
 StartupNotify=false
 Terminal=false
 Type=Application
+Icon=electricsheep
 Categories=Screensaver;
 OnlyShowIn=GNOME;KDE;XFCE

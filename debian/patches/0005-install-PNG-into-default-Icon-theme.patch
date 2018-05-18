@@ -1,0 +1,29 @@
+From: Ichthyostega <prg@ichthyostega.de>
+Date: Fri, 18 May 2018 18:10:47 +0200
+Subject: install PNG into default Icon theme
+
+---
+ Makefile.am | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Makefile.am b/Makefile.am
+index ad79e66..82c541a 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -33,6 +33,7 @@ EXTRA_DIST = \
+ 	Runtime/TrebuchetMS-24.glf \
+ 	Runtime/sheep_logo.xpm \
+ 	Runtime/sheep_logo2.xpm \
++	Runtime/logo.png \
+ 	wxWidgets-2.9.1 \
+ 	$(doc_DATA)
+ 
+@@ -66,6 +67,8 @@ install-data-local:
+ 	cp -f $(srcdir)/Runtime/electricsheep-smile.png $(DESTDIR)$(sharedir)/electricsheep/
+ 	cp -f $(srcdir)/Runtime/TrebuchetMS-20.glf $(DESTDIR)$(sharedir)/electricsheep/
+ 	cp -f $(srcdir)/Runtime/TrebuchetMS-24.glf $(DESTDIR)$(sharedir)/electricsheep/
++	mkdir -p $(DESTDIR)$(sharedir)/icons/hicolor/64x64/apps/
++	cp -f $(srcdir)/Runtime/logo.png $(DESTDIR)$(sharedir)/icons/hicolor/64x64/apps/electricsheep.png
+ 	mkdir -p $(DESTDIR)$(bindir)
+ 	cp -f $(srcdir)/electricsheep-saver $(DESTDIR)$(bindir) && chmod a+rx $(DESTDIR)$(bindir)/electricsheep-saver
+ 	mkdir -p $(DESTDIR)$(sharedir)/applications/screensavers/
