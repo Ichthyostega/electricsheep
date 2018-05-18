@@ -3,3 +3,4 @@
 0003-fix-Linux-version.patch
 0004-install-FreeDesktop-entries-from-Debian-packaging.patch
 0005-install-PNG-into-default-Icon-theme.patch
+0006-fix-some-FFmpeg-deprecations.patch

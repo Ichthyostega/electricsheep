@@ -1,0 +1,103 @@
+From: Ichthyostega <prg@ichthyostega.de>
+Date: Fri, 18 May 2018 23:29:42 +0200
+Subject: fix some FFmpeg deprecations
+
+This changeset applies some obvious and directly indicated fixes for ContentDecode
+to replace features deprecated in FFmpeg.
+
+Frame.h:
+ avpicture_get_size -> av_image_get_buffer_size  (defensively using align=1 byte)
+ avpicture_fill -> av_image_fill_arrays
+
+ContentDecoder.cpp
+ use AVStream::codecpar instead of AVStream::codec
+ av_free_packet -> av_packet_unref
+
+NOTE: there remain some not-so-obvious deprecations to fix
+
+ - in ContentDecoder.cpp, line 200: *writing* to AVStream::codec
+
+ - in ContentDecoder.cpp, line 578: avcodec_decode_video2
+   should be replaced by avcodec_send_package(..) followed
+   by avcodec_receive_frame.
+---
+ ContentDecoder/ContentDecoder.cpp | 8 ++++----
+ ContentDecoder/ContentDecoder.h   | 4 ++++
+ ContentDecoder/Frame.h            | 4 ++--
+ 3 files changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/ContentDecoder/ContentDecoder.cpp b/ContentDecoder/ContentDecoder.cpp
+index 8bfbc78..ee6cbbe 100644
+--- a/ContentDecoder/ContentDecoder.cpp
++++ b/ContentDecoder/ContentDecoder.cpp
+@@ -182,7 +182,7 @@ bool	CContentDecoder::Open( sOpenVideoInfo *ovi )
+ 	ovi->m_VideoStreamID = -1;
+     for( uint32 i=0; i<ovi->m_pFormatContext->nb_streams; i++ )
+     {
+-        if( ovi->m_pFormatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO )
++        if( ovi->m_pFormatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
+         {
+             ovi->m_pVideoStream = ovi->m_pFormatContext->streams[i];
+             ovi->m_VideoStreamID = static_cast<int32>(i);
+@@ -553,7 +553,7 @@ CVideoFrame *CContentDecoder::ReadOneFrame(sOpenVideoInfo *ovi)
+ 			if ( av_read_frame( pFormatContext, &packet ) < 0 )
+ 			{
+ 				ovi->m_ReadingTrailingFrames = true;
+-				av_free_packet(&packet);
++				av_packet_unref(&packet);
+ 				continue;
+ 			}
+ 		}
+@@ -595,7 +595,7 @@ CVideoFrame *CContentDecoder::ReadOneFrame(sOpenVideoInfo *ovi)
+             break;
+         }
+         
+-		av_free_packet(&packet);
++		av_packet_unref(&packet);
+     }
+ 
+     //	Do we have a fresh frame?
+@@ -687,7 +687,7 @@ CVideoFrame *CContentDecoder::ReadOneFrame(sOpenVideoInfo *ovi)
+         ovi->m_NextIsSeam = false;
+     }
+ 
+-    av_free_packet( &packet );
++    av_packet_unref( &packet );
+     return pVideoFrame;
+ }
+ 
+diff --git a/ContentDecoder/ContentDecoder.h b/ContentDecoder/ContentDecoder.h
+index 313fd8f..7f14e6e 100644
+--- a/ContentDecoder/ContentDecoder.h
++++ b/ContentDecoder/ContentDecoder.h
+@@ -29,10 +29,14 @@ extern "C"{
+ 	#include "libavcodec/avcodec.h"
+ 	#include "libavformat/avformat.h"
+ 	#include "libswscale/swscale.h"
++	#include "libavutil/imgutils.h"
++	#include "libavutil/avutil.h"
+ #else
+ 	#include "avcodec.h"
+ 	#include "avformat.h"
+ 	#include "swscale.h"
++	#include "imgutils.h"
++	#include "avutil.h"
+ #endif
+ }
+ 
+diff --git a/ContentDecoder/Frame.h b/ContentDecoder/Frame.h
+index 7744297..4d2ee3f 100644
+--- a/ContentDecoder/Frame.h
++++ b/ContentDecoder/Frame.h
+@@ -103,9 +103,9 @@ class CVideoFrame
+ 				
+ 				if (m_pFrame != NULL)
+ 				{
+-					int32 numBytes = avpicture_get_size( _format, _pCodecContext->width, _pCodecContext->height );
++					int32 numBytes = av_image_get_buffer_size( _format, _pCodecContext->width, _pCodecContext->height, 1 );
+ 					m_spBuffer = new Base::CAlignedBuffer( static_cast<uint32>(numBytes) * sizeof(uint8) );
+-					avpicture_fill( (AVPicture *)m_pFrame, m_spBuffer->GetBufferPtr(), _format, _pCodecContext->width, _pCodecContext->height );
++					av_image_fill_arrays( m_pFrame->data,  m_pFrame->linesize, m_spBuffer->GetBufferPtr(), _format, _pCodecContext->width, _pCodecContext->height, 1 );
+ 				} else
+ 					g_Log->Error( "m_pFrame == NULL" );
+ 			}
