@@ -1,3 +1,10 @@
+electricsheep (3.0.2-git20180325-1ppa1~bionic1) bionic; urgency=low
+
+  * Rebuild for Ubuntu/Bionic (18.04 LTS)
+  * Note: needs flam 3.1.1
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Sat, 19 May 2018 02:55:09 +0200
+
 electricsheep (3.0.2-git20180325-1~stretch) Lumiera-stretch-tools; urgency=low
 
   * New upstream release 3.0.2 (2018-03-25)
