@@ -2,29 +2,21 @@ From: Ichthyostega <prg@ichthyostega.de>
 Date: Thu, 17 May 2018 17:37:49 +0200
 Subject: Fix Linux Version information
 
-...looks like this was just overlooked...
+the main Linux Client Version string was fixed upstream meanwhile,
+which is prerequisite for the display of "Gold Sheep"
 
-also disable the BETA_RELEASE flag, since this package is based on a release version
+However, we also fix some further settings in the build system
+- disable the BETA_RELEASE flag, since this package is based on a release version
+- init Autotools with the proper version string
 ---
- Common/clientversion.h | 6 +++---
+ Common/clientversion.h | 2 +-
  configure.ac           | 2 +-
- 2 files changed, 4 insertions(+), 4 deletions(-)
+ 2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/Common/clientversion.h b/Common/clientversion.h
-index 0df1e26..88b866d 100644
+index a9d7af3..2c666c1 100644
 --- a/Common/clientversion.h
 +++ b/Common/clientversion.h
-@@ -17,8 +17,8 @@
- 		#define	CLIENT_VERSION_PRETTY		"macOS 3.0.2"
- 		#define CLIENT_SETTINGS				"ElectricSheep"
- 	#else
--		#define CLIENT_VERSION				"LNX_2.7b33"
--		#define	CLIENT_VERSION_PRETTY		"version 2.7b33"
-+		#define CLIENT_VERSION				"LNX_3.0.2"
-+		#define	CLIENT_VERSION_PRETTY		"version 3.0.2"
- 		#define CLIENT_SETTINGS				"ElectricSheep"
- 	#endif
- #endif
 @@ -33,7 +33,7 @@
  #define REDIRECT_SERVER				"community.sheepserver.net"
  #define REDIRECT_SERVER_FULL		"https://community.sheepserver.net"
