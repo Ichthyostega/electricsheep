@@ -1,3 +1,12 @@
+electricsheep (3.0.2-git20191005-1~stretch) Lumiera-stretch-tools; urgency=low
+
+  * Include upstream fixes on top of release 3.0.4 (2019-10-05)
+  * Linux Version bump partially applied upstream
+  * there are no further changes to flam3 upstream, so latest version is OK
+  * build against lib versions from the Linux distro where applicable
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 21 Oct 2019 05:37:57 +0200
+
 electricsheep (3.0.2-git20180325-1ppa1~bionic1) bionic; urgency=low
 
   * Rebuild for Ubuntu/Bionic (18.04 LTS)
