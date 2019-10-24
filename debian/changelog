@@ -1,7 +1,9 @@
-electricsheep (3.0.2-git20191005-1ppa1~bionic2) bionic; urgency=low
+electricsheep (3.0.2-git20191005-1ppa1~xenial3) xenial; urgency=low
 
-  * Rebuild for Ubuntu/Bionic (18.04 LTS)
+  * Rebuild for Ubuntu/Xenial (16.04 LTS)
   * Note: requires flam 3.1.1
+  * lowered debhelper requirement to >=9
+  * do not apply patch regarding FFMpeg deprecations
 
  -- Hermann Vosseler <deb@ichthyostega.de>  Thu, 24 Oct 2019 16:33:33 +0200
 
