@@ -9,4 +9,9 @@ include /usr/share/cdbs/1/class/autotools.mk
 include /usr/share/cdbs/1/rules/autoreconf.mk
 
 
+# due to build problems on newer Linux distros
+# https://aur.archlinux.org/packages/electricsheep/
+# https://github.com/stefantalpalaru/gentoo-overlay/issues/26
+# (not caused by a change in electricsheep, rather GL/glext.h )
+CXXFLAGS+=-DGL_GLEXT_PROTOTYPES
 
