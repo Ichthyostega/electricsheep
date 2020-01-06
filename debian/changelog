@@ -1,3 +1,10 @@
+electricsheep (3.0.2-git20191005-1+buster) Lumiera-buster-tools; urgency=low
+
+  * Build for Debian/Buster(stable).
+  * Note: requires a port of glee-dev (dropped from Debian)
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 06 Jan 2020 04:47:23 +0100
+
 electricsheep (3.0.2-git20191005-1ppa1~bionic2) bionic; urgency=low
 
   * Rebuild for Ubuntu/Bionic (18.04 LTS)
