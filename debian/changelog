@@ -1,3 +1,11 @@
+electricsheep (3.0.2-git20191005-1ppa2~focal) focal; urgency=low
+
+  * Rebuild for Ubuntu/Focal (20.04 LTS)
+  * can also be built with libwxgtk3.0-gtk3-dev (name change in Ubuntu)
+  * Note: requires flam 3.1.1
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Wed, 24 Jun 2020 23:01:17 +0000
+
 electricsheep (3.0.2-git20191005-1+buster) Lumiera-buster-tools; urgency=low
 
   * Build for Debian/Buster(stable).
