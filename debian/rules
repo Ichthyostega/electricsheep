@@ -15,3 +15,8 @@ include /usr/share/cdbs/1/rules/autoreconf.mk
 # (not caused by a change in electricsheep, rather GL/glext.h )
 CXXFLAGS+=-DGL_GLEXT_PROTOTYPES
 
+# Linking fails with missing pthreads, starting with Ubuntu/Hirsute 21.04
+# while the autoconf AX_PTHREAD macro succeds linking with not flag.
+# Thus adding the flag explicitly here
+LDFLAGS+=-lpthread
+
