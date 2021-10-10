@@ -1,0 +1,31 @@
+From: Ichthyostega <prg@ichthyostega.de>
+Date: Sun, 10 Oct 2021 14:57:37 +0200
+Subject: generate Glee prototypes
+
+Pass compilation flag for the client to generate GL/Glee prototypes.
+Must be activated explicitly since ~2018
+
+Probably the use of Glee is obsolete, but this would require
+someone with enough understanding of OpenGL to rewrite the code :-(
+
+
+Patch from https://github.com/stefantalpalaru/gentoo-overlay
+
+(this patch is more to the point; several other workarounds
+pass this flag as global compiler flag)
+---
+ Client/Makefile.am | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Client/Makefile.am b/Client/Makefile.am
+index 50a4850..3a4982f 100644
+--- a/Client/Makefile.am
++++ b/Client/Makefile.am
+@@ -12,6 +12,7 @@ endif
+ AM_CPPFLAGS = \
+ 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
+ 	-DPACKAGE_LOCALE_DIR=\""$(datadir)/locale"\" \
++	-DGL_GLEXT_PROTOTYPES \
+ 	-I $(top_srcdir) \
+ 	-iquote ../DisplayOutput/OpenGL \
+ 	-I ../Common \

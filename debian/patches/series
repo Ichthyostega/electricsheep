@@ -4,3 +4,4 @@
 0004-install-FreeDesktop-entries-from-Debian-packaging.patch
 0005-install-PNG-into-default-Icon-theme.patch
 0006-fix-some-FFmpeg-deprecations.patch
+0007-generate-Glee-prototypes.patch
