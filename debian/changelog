@@ -1,3 +1,12 @@
+electricsheep (3.0.2-git20191005-1ppa1~impish) impish; urgency=low
+
+  * Rebuild for Ubuntu/Impish (21.10)
+  * Patch: Compile needs -DGL_GLEXT_PROTOTYPES
+  * Note: still requires libGlee (e.g. from my PPA)
+  * Note: requires flam 3.1.1
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Sun, 10 Oct 2021 14:15:42 +0200
+
 electricsheep (3.0.2-git20191005-1ppa1~hirsute) hirsute; urgency=low
 
   * Rebuild for Ubuntu/Hirsute (21.04)
