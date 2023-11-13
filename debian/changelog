@@ -1,3 +1,12 @@
+electricsheep (3.0.2-git20191005-1ppa1~jammy) jammy; urgency=low
+
+  * Rebuild for Ubuntu/Jammy (22.04 LTS)
+  * Note: still requires libGlee (e.g. from my PPA)
+  * Note: requires flam 3.1.1
+  * add ubuntu package names for flam3 as alternative
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 13 Nov 2023 00:36:42 +0100
+
 electricsheep (3.0.2-git20191005-1ppa1~impish) impish; urgency=low
 
   * Rebuild for Ubuntu/Impish (21.10)
