@@ -1,7 +1,7 @@
-electricsheep (3.0.2-git20230129+fixffmpeg-1~bullseye) Lumiera-bullseye-tool; urgency=medium
+electricsheep (3.0.2-git20230129+fixffmpeg-1~bookworm) Lumiera-bookworm-tool; urgency=medium
 
   * Unofficial DEB package by Ichthyostega
-  * Build for Debian/Bullseye(11).
+  * Build for Debian/Bookworm(12 / stable).
 
  -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 13 Nov 2023 19:23:55 +0100
 
