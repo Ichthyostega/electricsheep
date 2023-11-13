@@ -1,6 +1,6 @@
-electricsheep (3.0.2-git20230129+fixffmpeg-1ppa1~mantic) mantic; urgency=low
+electricsheep (3.0.2-git20230129+fixffmpeg-1ppa1~noble) noble; urgency=low
 
-  * Rebuild for Ubuntu/Mantic (23.10)
+  * Rebuild for Ubuntu/Noble (24.04 upcoming)
   * includes unofficial ffmpeg fixes by Rogach (Jan 23)
   * Note: still requires libGlee (e.g. from my PPA)
   * Note: requires flam 3.1.1
