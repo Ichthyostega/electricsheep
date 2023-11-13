@@ -10,7 +10,7 @@ And seemingly we're using boost-threads anyway
  1 file changed, 1 deletion(-)
 
 diff --git a/configure.ac b/configure.ac
-index b9b9c91..e9a562c 100644
+index 2a90734..40399dd 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -37,7 +37,6 @@ AC_SYS_LARGEFILE

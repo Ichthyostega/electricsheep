@@ -27,7 +27,7 @@ index a9d7af3..2c666c1 100644
  
  #endif // CLIENTVERSION_H_INCLUDED
 diff --git a/configure.ac b/configure.ac
-index e9a562c..eb158d9 100644
+index 40399dd..b6af753 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -4,7 +4,7 @@ AC_PREREQ(2.57)

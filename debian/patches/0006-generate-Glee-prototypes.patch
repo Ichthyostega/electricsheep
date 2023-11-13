@@ -18,10 +18,10 @@ pass this flag as global compiler flag)
  1 file changed, 1 insertion(+)
 
 diff --git a/Client/Makefile.am b/Client/Makefile.am
-index 50a4850..3a4982f 100644
+index 54698b4..772814c 100644
 --- a/Client/Makefile.am
 +++ b/Client/Makefile.am
-@@ -12,6 +12,7 @@ endif
+@@ -7,6 +7,7 @@ endif
  AM_CPPFLAGS = \
  	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
  	-DPACKAGE_LOCALE_DIR=\""$(datadir)/locale"\" \
