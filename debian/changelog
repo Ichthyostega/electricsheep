@@ -1,3 +1,10 @@
+electricsheep (3.0.2-git20230129+fixffmpeg-1) UNRELEASED; urgency=low
+
+  * Include inofficial FFMpeg-5 fixes by Rogach (Jan 23)
+  * Mark as new version 3.0.2-git20230129+fixffmpeg
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 13 Nov 2023 17:46:23 +0100
+
 electricsheep (3.0.2-git20191005-1ppa1~jammy) jammy; urgency=low
 
   * Rebuild for Ubuntu/Jammy (22.04 LTS)
