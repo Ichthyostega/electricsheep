@@ -1,7 +1,7 @@
-electricsheep (3.0.2-git20230129+fixffmpeg-1~bookworm) Lumiera-bookworm-tool; urgency=medium
+electricsheep (3.0.2-git20230129+fixffmpeg-1~trixie) Lumiera-trixie-tool; urgency=low
 
   * Unofficial DEB package by Ichthyostega
-  * Build for Debian/Bookworm(12 / stable).
+  * Build for Debian/Trixie(13 / testing).
 
  -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 13 Nov 2023 19:23:55 +0100
 
