@@ -1,3 +1,12 @@
+electricsheep (3.0.2-git20230129+fixffmpeg-1ppa1~lunar) lunar; urgency=low
+
+  * Rebuild for Ubuntu/Lunar (23.04)
+  * includes unofficial ffmpeg fixes by Rogach (Jan 23)
+  * Note: still requires libGlee (e.g. from my PPA)
+  * Note: requires flam 3.1.1
+
+ -- Hermann Vosseler <deb@ichthyostega.de>  Mon, 13 Nov 2023 22:23:55 +0100
+
 electricsheep (3.0.2-git20230129+fixffmpeg-1~buster) Lumiera-buster-tool; urgency=medium
 
   * Unofficial DEB package by Ichthyostega
