@@ -294,20 +294,11 @@ AC_CHECK_LIB([boost_filesystem],[main],,
 	[AC_MSG_ERROR([you must install libboost-filesystem to compile electricsheep.])
 ])
 
-dnl Check for boost/system/config.hpp
-AC_CHECK_HEADER([boost/system/config.hpp],,
-	[AC_MSG_ERROR([you must install libboost-system to compile electricsheep.])
-])
-
-AC_CHECK_LIB([boost_system],[main],,
-	[AC_MSG_ERROR([you must install libboost-system to compile electricsheep.])
-])
-
 AC_LANG_POP([C++])
 
 
 
-BOOST_LDADD="-lboost_system"
+BOOST_LDADD=""
 
 AC_SUBST(BOOST_LDADD)
 
