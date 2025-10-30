@@ -94,7 +94,6 @@
 					<Add library="shlwapi" />
 					<Add library="boost_thread" />
 					<Add library="boost_filesystem" />
-					<Add library="boost_system" />
 					<Add library="..\ContentDownloader\libContentDownloader.a" />
 					<Add library="..\Networking\libNetworking.a" />
 					<Add library="libiconv" />
@@ -158,7 +157,6 @@
 					<Add library="shlwapi" />
 					<Add library="boost_thread" />
 					<Add library="boost_filesystem" />
-					<Add library="boost_system" />
 					<Add library="..\ContentDownloader\libContentDownloader.a" />
 					<Add library="..\Networking\libNetworking.a" />
 					<Add library="libiconv" />
