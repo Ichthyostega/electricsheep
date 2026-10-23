@@ -4,13 +4,15 @@
 # by Ichthyostega <deb@ichthyostega.de>
 #
 
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/autotools.mk
-include /usr/share/cdbs/1/rules/autoreconf.mk
-
-
 # Linking fails with missing pthreads, starting with Ubuntu/Hirsute 21.04
 # while the autoconf AX_PTHREAD macro succeds linking with not flag.
 # Thus adding the flag explicitly here
-LDFLAGS+=-lpthread
+export DEB_LDFLAGS_MAINT_APPEND = -lpthread
+
+%:
+	dh $@
+
+# For sake of clarity: the following switches are the default...
+override_dh_auto_configure:
+	dh_auto_configure -- --with-x11 --without-wayland
 
