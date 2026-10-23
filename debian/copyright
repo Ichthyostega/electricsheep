@@ -23,6 +23,7 @@ Files: debian/*
 Copyright: (c) 2001-2004, Sander Smeenk <ssmeenk@debian.org>
 Copyright: (c) 2005-2008, Alexis Sukrieh <sukria@sukria.net>
 Copyright: (c) 2009, Roberto C. Sanchez <roberto@connexer.com>
+Copyright: (c) 2015-2026, Ichthyostega <deb@ichthyostega.de>
 License: GPL2+
  It is assumed that all contributors release their packaging works under the
  same term as the package itself.

@@ -2,7 +2,7 @@ Source: electricsheep
 Section: x11
 Priority: optional
 Maintainer: Ichthyostega <deb@ichthyostega.de>
-Standards-Version: 4.0.1
+Standards-Version: 4.7.2
 Build-Depends:
 	debhelper-compat (= 13),
 	autoconf,
@@ -28,6 +28,7 @@ Build-Depends:
 	libboost-filesystem-dev (>= 1.74),
 	libboost-thread-dev (>= 1.74),
 	flam3-utils (>= 3.1.1~) | flam3 (>= 3.1.1~)
+Rules-Requires-Root: no
 Homepage: http://www.electricsheep.org
 
 Package: electricsheep
