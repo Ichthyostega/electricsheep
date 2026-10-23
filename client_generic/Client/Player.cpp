@@ -241,9 +241,17 @@ bool CPlayer::AddDisplay( uint32 screen )
 
 	// Initialize GLEW now that we have a GL context
 	GLenum err = glewInit();
+#ifdef HAVE_WAYLAND
+	// A GLX-flavoured GLEW (as in Debian) loads all core and extension entry
+	// points first and only then fails to set up GLXEW, since there is no
+	// X display under EGL/Wayland. The GL part is complete at that point.
+	if (GLEW_ERROR_NO_GLX_DISPLAY == err && getenv("WAYLAND_DISPLAY"))
+		err = GLEW_OK;
+#endif
 	if (GLEW_OK != err)
 	{
 		g_Log->Error("GLEW Init failed: %s", (const char*)glewGetErrorString(err));
+		fprintf(stderr, "GLEW Init failed: %s\n", (const char*)glewGetErrorString(err));
 		return false;
 	}
 

@@ -49,7 +49,12 @@ class	CElectricSheep_Linux : public CElectricSheep
 
 				//	Run gui.
 
-				g_Player().AddDisplay(g_Settings()->Get( "settings.player.screen", 0 ));
+				if( !g_Player().AddDisplay(g_Settings()->Get( "settings.player.screen", 0 )) )
+				{
+					g_Log->Error( "Unable to open the display, giving up." );
+					fprintf( stderr, "electricsheep: unable to open the display\n" );
+					return false;
+				}
 
 				//if( true )
 				{
