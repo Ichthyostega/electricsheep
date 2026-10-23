@@ -18,6 +18,7 @@
 #include	"boost/filesystem.hpp"
 #include	"boost/filesystem/path.hpp"
 #include	"boost/filesystem/operations.hpp"
+#include	"boost/filesystem/directory.hpp"
 #include	<boost/thread.hpp>
 
 using boost::filesystem::path;

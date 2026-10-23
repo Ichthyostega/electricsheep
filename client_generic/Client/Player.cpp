@@ -61,6 +61,7 @@
 #include	"boost/filesystem.hpp"
 #include	"boost/filesystem/path.hpp"
 #include	"boost/filesystem/operations.hpp"
+#include	"boost/filesystem/directory.hpp"
 
 #if defined(MAC) || defined(WIN32)
 	#define HONOR_VBL_SYNC
@@ -213,7 +214,14 @@ bool CPlayer::AddDisplay( uint32 screen )
 #else // !WIN32
 
 	g_Log->Info( "Attempting to open %s...", CDisplayGL::Description() );
-	spDisplay = new CDisplayGL();
+#ifdef HAVE_WAYLAND
+	if (getenv("WAYLAND_DISPLAY"))
+		spDisplay = new CWaylandGL();
+	else
+#endif
+		spDisplay = new CDisplayGL();
+
+
 	if( spDisplay == NULL )
 		return false;
 	

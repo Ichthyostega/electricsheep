@@ -1,4 +1,5 @@
 #ifndef	WIN32
+#ifdef HAVE_X11
 
 #include <string>
 #include <iostream>
@@ -684,4 +685,5 @@ void CUnixGL::checkClientMessages()
 
 };
 
+#endif
 #endif
