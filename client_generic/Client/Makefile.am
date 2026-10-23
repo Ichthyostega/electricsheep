@@ -97,7 +97,7 @@ endif
 %-client-protocol.h: %.xml
 	$(WAYLAND_SCANNER) client-header < $< > $@
 
-electricsheep_LDADD = -lboost_system -lboost_thread -lboost_filesystem -lglut \
+electricsheep_LDADD = -lboost_thread -lboost_filesystem -lglut \
 	$(AVCODEC_LIBS) $(AVFORMAT_LIBS) $(SWSCALE_LIBS) $(AVUTIL_LIBS) $(LUA_LIBS) $(GLU_LIBS) $(GLEE_LIBS) $(BOOST_LDADD) \
 	$(CURL_LIBS) $(PNG_LIBS) $(XRENDER_LIBS) $(LIBGTOP_LIBS) $(WAYLAND_LIBS) $(LIBDECOR_LIBS) $(XKBCOMMON_LIBS)
 
