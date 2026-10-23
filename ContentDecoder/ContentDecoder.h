@@ -101,8 +101,7 @@ struct sOpenVideoInfo
 	{
 		if( m_pVideoCodecContext )
 		{
-			avcodec_close( m_pVideoCodecContext );
-			m_pVideoCodecContext = NULL;
+			avcodec_free_context( &m_pVideoCodecContext );
 		}
 
 		if( m_pFormatContext )
