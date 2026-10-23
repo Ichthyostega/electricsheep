@@ -2,6 +2,7 @@
 #define GLX_VIDEO_OUTPUT_H
 
 #ifndef WIN32
+#ifdef HAVE_X11
 
 #ifdef _DisplayGL_H_
 #error "DisplayGL.h included before glx.h!"
@@ -13,7 +14,8 @@
 #ifndef LINUX_GNU
 #include "GLee.h"
 #else
-#include <GLee.h>
+#include <GL/glew.h>
+#include <GL/glx.h>
 #endif
 #include "DisplayOutput.h"
 
@@ -59,5 +61,5 @@ typedef	CUnixGL	CDisplayGL;
 }
 
 #endif
-
+#endif
 #endif

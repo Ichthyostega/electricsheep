@@ -12,7 +12,7 @@
 #ifndef LINUX_GNU
 #include	"GLee.h"
 #else
-#include <GLee.h>
+#include <GL/glew.h>
 #include <endian.h>
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define __LITTLE_ENDIAN__ __LITTLE_ENDIAN
@@ -58,9 +58,10 @@
 #include	"LinearFrameDisplay.h"
 #include	"CubicFrameDisplay.h"
 
+#include	"boost/filesystem.hpp"
 #include	"boost/filesystem/path.hpp"
 #include	"boost/filesystem/operations.hpp"
-#include	"boost/filesystem/convenience.hpp"
+#include	"boost/filesystem/directory.hpp"
 
 #if defined(MAC) || defined(WIN32)
 	#define HONOR_VBL_SYNC
@@ -69,7 +70,6 @@
 using boost::filesystem::path;
 using boost::filesystem::exists;
 using boost::filesystem::directory_iterator;
-using boost::filesystem::extension;
 
 using namespace DisplayOutput;
 
@@ -214,7 +214,14 @@ bool CPlayer::AddDisplay( uint32 screen )
 #else // !WIN32
 
 	g_Log->Info( "Attempting to open %s...", CDisplayGL::Description() );
-	spDisplay = new CDisplayGL();
+#ifdef HAVE_WAYLAND
+	if (getenv("WAYLAND_DISPLAY"))
+		spDisplay = new CWaylandGL();
+	else
+#endif
+		spDisplay = new CDisplayGL();
+
+
 	if( spDisplay == NULL )
 		return false;
 	
@@ -231,7 +238,24 @@ bool CPlayer::AddDisplay( uint32 screen )
 		return false;
 #endif
 	
- 	spRenderer = new CRendererGL();
+
+	// Initialize GLEW now that we have a GL context
+	GLenum err = glewInit();
+#ifdef HAVE_WAYLAND
+	// A GLX-flavoured GLEW (as in Debian) loads all core and extension entry
+	// points first and only then fails to set up GLXEW, since there is no
+	// X display under EGL/Wayland. The GL part is complete at that point.
+	if (GLEW_ERROR_NO_GLX_DISPLAY == err && getenv("WAYLAND_DISPLAY"))
+		err = GLEW_OK;
+#endif
+	if (GLEW_OK != err)
+	{
+		g_Log->Error("GLEW Init failed: %s", (const char*)glewGetErrorString(err));
+		fprintf(stderr, "GLEW Init failed: %s\n", (const char*)glewGetErrorString(err));
+		return false;
+	}
+
+	spRenderer = new CRendererGL();
 #endif
 
 	//	Start renderer & set window title.
@@ -643,9 +667,10 @@ bool	CPlayer::Update(uint32 displayUnit, bool &bPlayNoSheepIntro)
 		du = m_displayUnits[ displayUnit ];
 	}
 
-	du->spRenderer->Reset( eEverything );
-	du->spRenderer->Orthographic();
-	du->spRenderer->Apply();
+	// No longer needed, as we're using GLEW to initialize the GL context
+	//du->spRenderer->Reset( eEverything );
+	//du->spRenderer->Orthographic();
+	//du->spRenderer->Apply();
 	
 	{
 		boost::mutex::scoped_lock lockthis( m_updateMutex );

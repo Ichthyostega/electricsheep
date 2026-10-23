@@ -4,7 +4,7 @@ AC_PREREQ(2.57)
 ifdef([m4_pattern_allow],
       [m4_pattern_allow([^AC_.*])])
 
-AC_INIT(electricsheep,2.7b33-svn,http://code.google.com/p/electricsheep/issues/list)
+AC_INIT(electricsheep,3.0.2,http://code.google.com/p/electricsheep/issues/list)
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
@@ -37,7 +37,6 @@ AC_SYS_LARGEFILE
 
 AM_PROG_AS
 
-ACX_PTHREAD(PTHREAD_OK=true,PTHREAD_OK=false)
 
 IS_LINUX_GNU="false"
 
@@ -157,8 +156,9 @@ AC_SUBST(AVUTIL_LIBS)
 
 dnl Check for lua
 
-PKG_CHECK_MODULES([LUA], [lua5.1],, 
-	[PKG_CHECK_MODULES([LUA], [lua >= 5.1])
+PKG_CHECK_MODULES([LUA], [lua5.1],,
+	[PKG_CHECK_MODULES([LUA], [lua-5.1],,
+		[PKG_CHECK_MODULES([LUA], [lua >= 5.1])])
 ])
 
 AC_SUBST(LUA_CFLAGS)
@@ -166,33 +166,10 @@ AC_SUBST(LUA_LIBS)
 
 
 
-dnl Check for glee
+dnl Check for GLEW
 
-PKG_CHECK_MODULES([GLEE],[glee], [HAVE_GLEE=true] , [HAVE_GLEE=false] )
-if test "$HAVE_GLEE" = "false"; then
-
-   PKG_CHECK_MODULES([GLEE],[GLee], [HAVE_GLEE=true] , [HAVE_GLEE=false] )
-   if test "$HAVE_GLEE" = "false"; then
-      AC_MSG_CHECKING(for GLee.h)
-      AC_CHECK_HEADERS(GLee.h GL/GLee.h)
-
-      if test "x$ac_cv_header_GLee_h" = "xno"; then
-      	 if test "xac_cv_header_GL_GLee_h" = "xno"; then
-      	    AC_MSG_ERROR([neither GLee.h nor GL/GLee.h were found. Please make sure you have GLee.h installed in your include path.])
-      	 fi
-      	 dnl found GLee.h in GL subdir
-      	 GLEE_CFLAGS="-I $includedir/GL -I/usr/include/GL"
-      fi
-
-      AC_CHECK_LIB([GLee],[main],GLEE_LIBS="-lGLee",
-	AC_CHECK_LIB([glee],[main],GLEE_LIBS="-lglee",,))
-
-      fi
-
-fi
-AC_SUBST(GLEE_CFLAGS)
-AC_SUBST(GLEE_LIBS)
-
+PKG_CHECK_MODULES([GLEW], [glew],,
+  [AC_MSG_ERROR([GLEW not found. Please make sure libglew-dev is installed.])])
 
 dnl Check for curl
 
@@ -210,13 +187,6 @@ AC_SUBST(PNG_CFLAGS)
 AC_SUBST(PNG_LIBS)
 
 
-
-dnl Check for Xrender
-
-PKG_CHECK_MODULES(XRENDER,xrender)
-
-AC_SUBST(XRENDER_CFLAGS)
-AC_SUBST(XRENDER_LIBS)
 
 
 # Check for flam3-animate
@@ -294,20 +264,11 @@ AC_CHECK_LIB([boost_filesystem],[main],,
 	[AC_MSG_ERROR([you must install libboost-filesystem to compile electricsheep.])
 ])
 
-dnl Check for boost/system/config.hpp
-AC_CHECK_HEADER([boost/system/config.hpp],,
-	[AC_MSG_ERROR([you must install libboost-system to compile electricsheep.])
-])
-
-AC_CHECK_LIB([boost_system],[main],,
-	[AC_MSG_ERROR([you must install libboost-system to compile electricsheep.])
-])
-
 AC_LANG_POP([C++])
 
 
 
-BOOST_LDADD="-lboost_system"
+BOOST_LDADD=""
 
 AC_SUBST(BOOST_LDADD)
 
@@ -331,9 +292,78 @@ AC_CHECK_LIB([rt],[clock_gettime],,
 	[AC_MSG_ERROR([you must install librt to compile electricsheep.])
 ])
 
+dnl Add flag x11
+AC_ARG_WITH([x11],
+            [AS_HELP_STRING([--with-x11], [Build with X11 support])],
+            [with_x11=$withval], [with_x11=yes])
 
+AM_CONDITIONAL([WITH_X11], [test "$with_x11" = "yes"])
 
-AC_OUTPUT([ 
+dnl Check for Xrender
+if test "$with_x11" = "yes"; then
+    AC_CHECK_HEADERS([X11/Xlib.h], , AC_MSG_ERROR([Xlib.h not found. Install X11 development libraries.]))
+    PKG_CHECK_MODULES(XRENDER, xrender)
+    PKG_CHECK_MODULES([XRENDER], xrender, [
+      AC_DEFINE([HAVE_X11], [1], [Define if X11 is available])
+      XRENDER_CFLAGS="$XRENDER_CFLAGS"
+      XRENDER_LIBS="$XRENDER_LIBS"
+    ])
+    AC_SUBST(XRENDER_CFLAGS)
+    AC_SUBST(XRENDER_LIBS)
+fi
+
+dnl Add flag wayland
+AC_ARG_WITH([wayland],
+            [AS_HELP_STRING([--with-wayland], [Build with Wayland support])],
+            [with_wayland=$withval], [with_wayland=no])
+AM_CONDITIONAL([WITH_WAYLAND], [test "$with_wayland" = "yes"])
+
+dnl Check for Wayland and EGL
+if test "$with_wayland" = "yes"; then
+  PKG_CHECK_MODULES([WAYLAND], [wayland-client >= 1.0 wayland-egl >= 1.0 egl >= 1.0], [
+    AC_DEFINE([HAVE_WAYLAND], [1], [Define if Wayland and EGL are available])
+    WAYLAND_CFLAGS="$WAYLAND_CFLAGS"
+    WAYLAND_LIBS="$WAYLAND_LIBS"
+  ])
+
+  AC_SUBST(WAYLAND_CFLAGS)
+  AC_SUBST(WAYLAND_LIBS)
+
+  dnl check for wayland scanner and save its path
+  PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner >= 1.14.0])
+  AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner], [no])
+  if test "x$WAYLAND_SCANNER" = "xno"; then
+    AC_MSG_ERROR([wayland-scanner is required but not found. Please install wayland-scanner.])
+  fi
+  AC_SUBST([WAYLAND_SCANNER])
+
+  dnl check for libxkbcommon
+  PKG_CHECK_MODULES([XKBCOMMON], [xkbcommon >= 0.5.0])
+  AC_SUBST(XKBCOMMON_CFLAGS)
+  AC_SUBST(XKBCOMMON_LIBS)
+
+  dnl Add flag libdecor
+  AC_ARG_WITH([libdecor],
+    [AS_HELP_STRING([--with-libdecor],
+    [Use libdecor for client side window decoration if compositor does not support server side decorations])],
+    [use_libdecor=$withval], [use_libdecor=yes])
+
+  dnl Check for libdecor
+  if test "x$use_libdecor" = "xyes"; then
+    PKG_CHECK_MODULES([LIBDECOR], [libdecor-0])
+    AC_SUBST([LIBDECOR_CFLAGS])
+    AC_SUBST([LIBDECOR_LIBS])
+    AC_DEFINE([HAVE_LIBDECOR], [1], [Define if libdecor is available])
+  else
+    AC_MSG_WARN([Building for wayland without libdecor support. Window will not have title bar compositors that do not support server side decorations.])
+  fi
+fi
+
+if test "$IS_LINUX_GNU" = "true" && test "$with_x11" = "no" && test "$with_wayland" = "no"; then
+    AC_MSG_ERROR([On GNU/Linux, either --with-x11 or --with-wayland must be set.])
+fi
+
+AC_OUTPUT([
 Makefile
 Client/Makefile
 MSVC/SettingsGUI/Makefile
