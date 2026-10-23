@@ -4,11 +4,6 @@
 # by Ichthyostega <deb@ichthyostega.de>
 #
 
-# Linking fails with missing pthreads, starting with Ubuntu/Hirsute 21.04
-# while the autoconf AX_PTHREAD macro succeds linking with not flag.
-# Thus adding the flag explicitly here
-export DEB_LDFLAGS_MAINT_APPEND = -lpthread
-
 %:
 	dh $@
 
