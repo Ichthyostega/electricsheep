@@ -166,9 +166,9 @@ AC_SUBST(LUA_LIBS)
 
 
 
-dnl Check for glee
+dnl Check for GLEW
 
-PKG_CHECK_MODULES([GLEE], [glew],,
+PKG_CHECK_MODULES([GLEW], [glew],,
   [AC_MSG_ERROR([GLEW not found. Please make sure libglew-dev is installed.])])
 
 dnl Check for curl
