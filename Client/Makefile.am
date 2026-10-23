@@ -39,9 +39,7 @@ Hud.cpp \
 ../DisplayOutput/OpenGL/egl.cpp \
 ../DisplayOutput/OpenGL/ShaderGL.cpp \
 ../DisplayOutput/OpenGL/TextureFlatGL.cpp \
-../DisplayOutput/OpenGL/wgl.cpp \
 ../DisplayOutput/OpenGL/FontGL.cpp \
-../DisplayOutput/OpenGL/mgl.cpp \
 ../DisplayOutput/Renderer/Shader.cpp \
 ../DisplayOutput/Renderer/Texture.cpp \
 ../DisplayOutput/Renderer/Font.cpp \
