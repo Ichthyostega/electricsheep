@@ -1,4 +1,4 @@
-electricsheep (3.0.2-git20260417+contribFixes-1~trixie) Lumiera-trixie-tool; urgency=low
+electricsheep (3.0.2-git20260417+contribFixes-1~forky) Lumiera-forky-tool; urgency=low
 
   * Include latest fixes by Upsteam.
   * Include contributions by Rogach, OtterFlip, Schievel1
@@ -16,7 +16,7 @@ electricsheep (3.0.2-git20260417+contribFixes-1~trixie) Lumiera-trixie-tool; urg
   * libflam3 is not a depenency, rather flam3-animate (flam3-utils)
   * the workaround to link against pthread is obsolete
   * Unofficial DEB package by Ichthyostega
-  * Build for Debian/Trixie(stable).
+  * Build for Debian/Forky(testing).
 
  -- Hermann Vosseler <deb@ichthyostega.de>  Sat, 24 Oct 2026 00:55:00 +0200
 
