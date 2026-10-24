@@ -1,3 +1,7 @@
+# xfce4-screensaver (and similar daemons derived from gnome-screensaver) only
+# start savers found in their known directories, among them /usr/lib/xscreensaver.
+# The screensaver .desktop entry thus refers to "electricsheep" by plain name,
+# which must resolve through this link; a path in /usr/bin is silently refused.
 /usr/bin/electricsheep /usr/lib/xscreensaver/electricsheep
 /usr/share/applications/screensavers/electricsheep.desktop /usr/share/applnk/System/ScreenSavers/electricsheep.desktop
 

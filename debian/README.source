@@ -1,5 +1,23 @@
-This package uses quilt to manage all modifications to the upstream
-source.  Changes are stored in the source package as diffs in
-debian/patches and applied during the build.
+This is a custom / inofficial package to provide the "classic" Electricsheep client for Linux.
+Note that this client and framework was marekd as "only archive" by Upstream, in 2026-04
+There is now a newer service, promoted by Upstream: https://infinidream.ai/
 
-See /usr/share/doc/quilt/README.source for a detailed explanation.
+However, as of 2026-10, the classic client works just fine, also with "Gold sheep".
+
+For this package, I integrated the latest fixes by the community.
+Github: https://github.com/Ichthyostega/electricsheep/tree/deb
+PPA: https://launchpad.net/~ichthyo/+archive/ubuntu/zeug
+
+
+NOTE:
+ - the old gnome-screensaver framework is obsolete.
+ - I have not tested ElectricSheep on Gnome
+ - For XFCE, xfce4-screensaver requires the executable to be provided
+   from one of the special trusted locations. We install a symlink into
+   /usr/lib/xscreensaver/ -> /usr/bin/electricsheep
+ - The upstream sources also ship two shell scripts, "electricsheep-saver"
+   and "electricsheep-saver-gnome". These are not used in this current setup.
+
+Ichthyo, 2026-10
+
+
